@@ -65,18 +65,3 @@ func (t *ReverseTwirp) Handle(method string, tr ParamTransfer) http.HandlerFunc 
 		t.Target.ServeHTTP(w, r)
 	}
 }
-
-type TwirpServer interface {
-	http.Handler
-	// PathPrefix returns the HTTP URL path prefix for all methods handled by this
-	// service. This can be used with an HTTP mux to route twirp requests
-	// alongside non-twirp requests on one HTTP listener.
-	PathPrefix() string
-}
-
-func NewSingleTwirpServerProxy(svr TwirpServer) *ReverseTwirp {
-	return &ReverseTwirp{
-		Target: svr,
-		Path:   svr.PathPrefix(),
-	}
-}

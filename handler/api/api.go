@@ -5,7 +5,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pandodao/safe-wallet/handler/api/reversetwirp"
+	"github.com/pandodao/safe-wallet/handler/rpc"
 )
+
+func New(svr *rpc.Server) *Server {
+	path, handler := svr.Handler()
+	return &Server{
+		rt: &reversetwirp.ReverseTwirp{
+			Target: handler,
+			Path:   path,
+		},
+	}
+}
 
 type Server struct {
 	rt *reversetwirp.ReverseTwirp

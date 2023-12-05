@@ -17,7 +17,7 @@ const (
 	TransferStatusHandled
 )
 
-//go:generate enumer -type=TransferState -trimprefix=TransferState -json
+//go:generate enumer -type=TransferStatus -trimprefix=TransferStatus -json
 
 type Transfer struct {
 	ID          uint64            `json:"id,omitempty"`
