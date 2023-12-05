@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package github.com.pando.safewallet;
+option go_package = "rpc/safewallet";
+
+import "google/protobuf/timestamp.proto";
+
+message Transfer {
+  enum Status {
+    STATUS_NOT_SET = 0;
+    PENDING = 1;
+    ASSIGNED = 2;
+    HANDLED = 3;
+  }
+
+  string trace_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  Status status = 3;
+  string asset_id = 4;
+  string amount = 5;
+  string memo = 6;
+  repeated string opponents = 7;
+  uint32 threshold = 8;
+}
+
+message CreateTransferRequest {
+  string trace_id = 1;
+  string asset_id = 2;
+  string amount = 3;
+  string memo = 4;
+  repeated string opponents = 5;
+  uint32 threshold = 6;
+}
+
+message CreateTransferResponse {
+  Transfer transfer = 1;
+}
+
+message FindTransferRequest {
+  string trace_id = 1;
+}
+
+message FindTransferResponse {
+  Transfer transfer = 1;
+}
+
+service SafeWalletService {
+  rpc CreateTransfer(CreateTransferRequest) returns (CreateTransferResponse);
+  rpc FindTransfer(FindTransferRequest) returns (FindTransferResponse);
+}
