@@ -21,6 +21,8 @@ builds:
     goos:
       - linux
       - darwin
+    ldflags:
+        - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
   - main: ./cmd/server
     id: server
     binary: safe-wallet-server
@@ -29,6 +31,8 @@ builds:
     goos:
       - linux
       - darwin
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
 
 archives:
   - format: tar.gz
