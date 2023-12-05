@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -17,9 +18,10 @@ import (
 
 var (
 	opt struct {
-		config string
-		port   int
-		debug  bool
+		config  string
+		port    int
+		debug   bool
+		version bool
 	}
 
 	version = "0.0.1-src"
@@ -30,7 +32,13 @@ func main() {
 	flag.StringVar(&opt.config, "config", "config.yaml", "config file path")
 	flag.IntVar(&opt.port, "port", 8080, "server port")
 	flag.BoolVar(&opt.debug, "debug", false, "debug mode")
+	flag.BoolVar(&opt.version, "version", false, "show version")
 	flag.Parse()
+
+	if opt.version {
+		fmt.Printf("safe-wallet server\n\tversion: %s\n\tcommit: %s\n", version, commit)
+		return
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
