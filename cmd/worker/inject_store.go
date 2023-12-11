@@ -19,7 +19,7 @@ func provideDB(v *viper.Viper) (*nap.DB, func(), error) {
 	v.SetDefault("db.driver", "mysql")
 
 	driver := v.GetString("db.driver")
-	dsn := v.GetString("db.dns")
+	dsn := v.GetString("db.dsn")
 	conn, err := nap.Open(driver, dsn)
 	if err != nil {
 		return nil, nil, err
