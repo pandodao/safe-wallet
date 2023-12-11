@@ -39,7 +39,7 @@ func (s *store) GetOffset(ctx context.Context) (uint64, error) {
 func save(ctx context.Context, tx *sql.Tx, output *core.Output) error {
 	b := sq.Insert("outputs").
 		Options("IGNORE").
-		Columns("sequence", "created_at", "hash", "index", "asset_id", "amount").
+		Columns("sequence", "created_at", "hash", "`index`", "asset_id", "amount").
 		Values(output.Sequence, output.CreatedAt, output.Hash.String(), output.Index, output.AssetID, output.Amount)
 	stmt, args := b.MustSql()
 	_, err := tx.ExecContext(ctx, stmt, args...)

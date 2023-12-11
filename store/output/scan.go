@@ -14,7 +14,7 @@ var scanColumns = []string{
 	"sequence",
 	"created_at",
 	"hash",
-	"index",
+	"`index`",
 	"asset_id",
 	"amount",
 }

@@ -114,7 +114,7 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 }
 
 func (s *Server) inspectTransferStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
-	transfer, err := s.transfers.FindTrace(ctx, traceID)
+	transfer, err := s.transferz.Find(ctx, traceID)
 
 	switch {
 	case err == nil && transfer.Status > core.TransferStatusPending:
