@@ -25,7 +25,7 @@ type Server struct {
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 
-	r.Route("transfers", func(r chi.Router) {
+	r.Route("/transfers", func(r chi.Router) {
 		r.Get("/{trace_id}", s.rt.Handle("FindTransfer", nil))
 		r.Post("/", s.rt.Handle("CreateTransfer", nil))
 	})
