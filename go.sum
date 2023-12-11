@@ -238,8 +238,8 @@ github.com/opencontainers/image-spec v1.0.2 h1:9yCKha/T5XdGtO0q9Q9a6T5NUCsTn/DrB
 github.com/opencontainers/image-spec v1.0.2/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgFuSOe4oEnDDmGLROTvMragMUXpTQw=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
-github.com/pandodao/generic v1.0.2 h1:QKQNmmeZMrwYrbmkNQsJQRiwQhY55cQDr9i09/OSHYQ=
-github.com/pandodao/generic v1.0.2/go.mod h1:IB6gEKkE5QF4n2NC6CUDHq0wK6qOOIsYOTZlhdeOFEk=
+github.com/pandodao/generic v1.0.3 h1:lQocZwtlVkeuYzW4+voYMkOqhb4/fjZVWnoWdNo9RPw=
+github.com/pandodao/generic v1.0.3/go.mod h1:IB6gEKkE5QF4n2NC6CUDHq0wK6qOOIsYOTZlhdeOFEk=
 github.com/pelletier/go-toml/v2 v2.1.0 h1:FnwAJ4oYMvbT/34k9zzHuZNrhlz48GB3/s6at6/MHO4=
 github.com/pelletier/go-toml/v2 v2.1.0/go.mod h1:tJU2Z3ZkXwnxa4DPO899bsyIoywizdUvyaeZurnPPDc=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

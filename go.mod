@@ -13,7 +13,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/lib/pq v1.10.9
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
-	github.com/pandodao/generic v1.0.2
+	github.com/pandodao/generic v1.0.3
 	github.com/rs/cors v1.10.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/spf13/viper v1.17.0
