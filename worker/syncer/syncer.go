@@ -62,6 +62,8 @@ func (w *Syncer) run(ctx context.Context) error {
 		return fmt.Errorf("outputs dry")
 	}
 
+	w.logger.Info("list new outputs", "count", len(outputs), "offset", offset)
+
 	if err := w.outputs.Save(ctx, outputs); err != nil {
 		w.logger.Error("outputs.Save", "err", err)
 		return err

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/pandodao/safe-wallet/core"
 	"golang.org/x/sync/errgroup"
 )
@@ -100,4 +101,17 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 
 	logger.Debug("transfer status updated")
 	return nil
+}
+
+func (w *Cashier) inspectTransferStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
+	transfer, err := w.transferz.Find(ctx, traceID)
+
+	switch {
+	case err == nil && transfer.Status > core.TransferStatusPending:
+		return transfer.Status, nil
+	case err != nil && !mixin.IsErrorCodes(err, mixin.EndpointNotFound):
+		return 0, err
+	default:
+		return core.TransferStatusPending, nil
+	}
 }

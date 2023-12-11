@@ -3,6 +3,7 @@ package transfer
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
@@ -58,7 +59,33 @@ func (s *service) Find(ctx context.Context, traceID string) (*core.Transfer, err
 	return transfer, nil
 }
 
+func (s *service) InspectStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
+	req, err := s.client.SafeReadTransactionRequest(ctx, traceID)
+	if err != nil {
+		if mixin.IsErrorCodes(err, mixin.EndpointNotFound) {
+			return core.TransferStatusPending, nil
+		}
+
+		return 0, err
+	}
+
+	switch req.State {
+	case mixin.SafeUtxoStateSigned:
+		return core.TransferStatusAssigned, nil
+	case mixin.SafeUtxoStateSpent:
+		return core.TransferStatusHandled, nil
+	default:
+		return core.TransferStatusPending, nil
+	}
+}
+
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
+	if status, err := s.InspectStatus(ctx, transfer.TraceID); err != nil {
+		return err
+	} else if status > core.TransferStatusPending {
+		return nil
+	}
+
 	asset, err := s.assetz.Find(ctx, transfer.AssetID)
 	if err != nil {
 		return err
@@ -73,7 +100,7 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 		utxos = append(utxos, &mixin.SafeUtxo{
 			TransactionHash:    output.Hash,
 			OutputIndex:        output.Index,
-			Asset:              asset.Hash,
+			KernelAssetID:      asset.Hash,
 			Amount:             output.Amount,
 			Receivers:          []string{s.client.ClientID},
 			ReceiversThreshold: 1,
@@ -103,17 +130,17 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 
 	tx, err := s.client.MakeTransaction(ctx, b, receivers)
 	if err != nil {
-		return err
+		return fmt.Errorf("make transaction failed: %w", err)
 	}
 
 	// prepare transaction
 	prepareReq, err := s.client.SafeCreateTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
 		RequestID:      transfer.TraceID,
-		RawTransaction: hex.EncodeToString(generic.Must(tx.DumpData())),
+		RawTransaction: generic.Must(tx.Dump()),
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("create transaction request failed: %w", err)
 	}
 
 	if prepareReq.State == mixin.SafeUtxoStateSpent {
@@ -122,16 +149,18 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 
 	// sign transaction
 	if err := mixin.SafeSignTransaction(tx, s.spendKey, prepareReq.Views, 0); err != nil {
-		return err
+		return fmt.Errorf("sign transaction failed: %w", err)
 	}
 
 	// submit transaction
-	_, err = s.client.SafeSubmitTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
+	if _, err := s.client.SafeSubmitTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
 		RequestID:      transfer.TraceID,
 		RawTransaction: hex.EncodeToString(generic.Must(tx.DumpData())),
-	})
+	}); err != nil {
+		return fmt.Errorf("submit transaction failed: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func splitChange(amount decimal.Decimal, n int) []decimal.Decimal {

@@ -29,7 +29,7 @@ func (s *store) GetOffset(ctx context.Context) (uint64, error) {
 	row := s.db.QueryRowContext(ctx, stmt, args...)
 
 	var seq uint64
-	if err := row.Scan(&seq); !errors.Is(err, sql.ErrNoRows) {
+	if err := row.Scan(&seq); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 

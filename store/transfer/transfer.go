@@ -37,7 +37,7 @@ func update(ctx context.Context, e execer, transfer *core.Transfer, to core.Tran
 		Set("status", to).
 		Set("output_from", transfer.AssignRange[0]).
 		Set("output_to", transfer.AssignRange[1]).
-		Where("id = ? AND status == ?", transfer.ID, transfer.Status)
+		Where("id = ? AND status = ?", transfer.ID, transfer.Status)
 	stmt, args := b.MustSql()
 	r, err := e.ExecContext(ctx, stmt, args...)
 	if err != nil {
@@ -60,10 +60,7 @@ func (s *store) Create(ctx context.Context, transfer *core.Transfer) error {
 	return insert(ctx, s.db, transfer)
 }
 
-func (s *store) Assign(ctx context.Context, transfer *core.Transfer, previousOffset uint64) error {
-	tx := generic.Must(s.db.Begin())
-	defer tx.Rollback()
-
+func assign(ctx context.Context, tx *sql.Tx, transfer *core.Transfer, previousOffset uint64) error {
 	if err := updateAssign(ctx, tx, &Assign{
 		AssetID:  transfer.AssetID,
 		Offset:   transfer.AssignRange[1],
@@ -78,6 +75,17 @@ func (s *store) Assign(ctx context.Context, transfer *core.Transfer, previousOff
 	}
 
 	return update(ctx, tx, transfer, core.TransferStatusAssigned)
+}
+
+func (s *store) Assign(ctx context.Context, transfer *core.Transfer, previousOffset uint64) error {
+	tx := generic.Must(s.db.Begin())
+	defer tx.Rollback()
+
+	if err := assign(ctx, tx, transfer, previousOffset); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *store) UpdateStatus(ctx context.Context, transfer *core.Transfer, to core.TransferStatus) error {
@@ -132,7 +140,7 @@ func (s *store) GetAssignOffset(ctx context.Context, assetID string) (uint64, er
 	stmt, args := b.MustSql()
 	row := s.db.QueryRowContext(ctx, stmt, args...)
 	var offset uint64
-	if err := row.Scan(&offset); !errors.Is(err, sql.ErrNoRows) {
+	if err := row.Scan(&offset); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 

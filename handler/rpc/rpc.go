@@ -113,23 +113,10 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 	return &safewallet.CreateTransferResponse{Transfer: viewTransfer(v.(*core.Transfer))}, nil
 }
 
-func (s *Server) inspectTransferStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
-	transfer, err := s.transferz.Find(ctx, traceID)
-
-	switch {
-	case err == nil && transfer.Status > core.TransferStatusPending:
-		return transfer.Status, nil
-	case err != nil && !mixin.IsErrorCodes(err, mixin.EndpointNotFound):
-		return 0, err
-	default:
-		return core.TransferStatusPending, nil
-	}
-}
-
 func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) error {
 	logger := s.logger.With("transfer", transfer.TraceID)
 
-	if status, err := s.inspectTransferStatus(ctx, transfer.TraceID); err != nil {
+	if status, err := s.transferz.InspectStatus(ctx, transfer.TraceID); err != nil {
 		logger.Error("inspectTransferStatus", "err", err)
 		return err
 	} else if status > core.TransferStatusPending {
@@ -141,7 +128,10 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	offset, err := s.transfers.GetAssignOffset(ctx, transfer.AssetID)
 	if err != nil {
 		logger.Error("transfers.GetAssignOffset", "err", err)
+		return err
 	}
+
+	logger.Debug("GetAssignOffset", "offset", offset)
 
 	const limit = 256
 	outputs, err := s.outputs.List(ctx, offset, transfer.AssetID, transfer.Amount, limit)
