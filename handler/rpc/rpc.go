@@ -116,6 +116,13 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) error {
 	logger := s.logger.With("transfer", transfer.TraceID)
 
+	if _, err := s.transfers.FindTrace(ctx, transfer.TraceID); err == nil {
+		return nil
+	} else if !store.IsErrNotFound(err) {
+		logger.Error("transfers.FindTrace", "err", err)
+		return err
+	}
+
 	if status, err := s.transferz.InspectStatus(ctx, transfer.TraceID); err != nil {
 		logger.Error("inspectTransferStatus", "err", err)
 		return err
