@@ -93,12 +93,12 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 		Opponent: generic.Try(mixin.NewMixAddress(req.Opponents, uint8(max(req.Threshold, 1)))),
 	}
 
-	if _, err := uuid.Parse(req.AssetId); err != nil {
-		return nil, twirp.InvalidArgument.Error("invalid asset id")
-	}
-
 	if _, err := uuid.Parse(req.TraceId); err != nil {
 		return nil, twirp.InvalidArgument.Error("invalid trace id")
+	}
+
+	if _, err := uuid.Parse(req.AssetId); err != nil {
+		return nil, twirp.InvalidArgument.Error("invalid asset id")
 	}
 
 	if !transfer.Amount.IsPositive() || transfer.Amount.Truncate(8).LessThan(transfer.Amount) {
