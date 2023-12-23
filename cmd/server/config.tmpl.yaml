@@ -8,3 +8,6 @@ db:
   dsn: root:root@tcp
   replicas:
   - root:root@tcp
+
+rpc:
+  prefix: /twirp

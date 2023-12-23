@@ -22,6 +22,7 @@ import (
 
 type Config struct {
 	ClientID string `valid:"uuid,required"`
+	Prefix   string `valid:"required"`
 }
 
 func New(
@@ -41,6 +42,7 @@ func New(
 		transferz: transferz,
 		logger:    logger.With("server", "rpc"),
 		sf:        &singleflight.Group{},
+		prefix:    cfg.Prefix,
 		addr:      mixin.RequireNewMixAddress([]string{cfg.ClientID}, 1),
 	}
 }
@@ -52,10 +54,11 @@ type Server struct {
 	logger    *slog.Logger
 	sf        *singleflight.Group
 	addr      *mixin.MixAddress
+	prefix    string
 }
 
 func (s *Server) Handler() (string, http.Handler) {
-	svr := safewallet.NewSafeWalletServiceServer(s, nil)
+	svr := safewallet.NewSafeWalletServiceServer(s, twirp.WithServerPathPrefix(s.prefix))
 	return svr.PathPrefix(), svr
 }
 
