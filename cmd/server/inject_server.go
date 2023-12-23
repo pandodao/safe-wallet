@@ -12,6 +12,7 @@ import (
 	"github.com/pandodao/safe-wallet/handler/hc"
 	"github.com/pandodao/safe-wallet/handler/rpc"
 	"github.com/rs/cors"
+	"github.com/spf13/viper"
 )
 
 var serverSet = wire.NewSet(
@@ -22,7 +23,12 @@ var serverSet = wire.NewSet(
 )
 
 func provideRpcConfig(ks *mixin.Keystore) rpc.Config {
-	return rpc.Config{ClientID: ks.ClientID}
+	viper.SetDefault("rpc.prefix", "/twirp")
+
+	return rpc.Config{
+		ClientID: ks.ClientID,
+		Prefix:   viper.GetString("rpc.prefix"),
+	}
 }
 
 func provideServer(apiHandler *api.Server, rpcHandler *rpc.Server) *http.Server {
