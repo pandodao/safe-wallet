@@ -58,7 +58,7 @@ type Server struct {
 }
 
 func (s *Server) Handler() (string, http.Handler) {
-	svr := safewallet.NewSafeWalletServiceServer(s, twirp.WithClientPathPrefix(s.prefix))
+	svr := safewallet.NewSafeWalletServiceServer(s, twirp.WithServerPathPrefix(s.prefix))
 	return svr.PathPrefix(), svr
 }
 
