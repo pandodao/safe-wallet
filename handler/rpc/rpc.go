@@ -16,13 +16,15 @@ import (
 	"github.com/pandodao/safe-wallet/store"
 	"github.com/shopspring/decimal"
 	"github.com/twitchtv/twirp"
+	"github.com/zyedidia/generic/mapset"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Config struct {
-	ClientID string `valid:"uuid,required"`
-	Prefix   string `valid:"required"`
+	ClientID      string   `valid:"uuid,required"`
+	Prefix        string   `valid:"required"`
+	BlockedAssets []string `valid:"uuid"`
 }
 
 func New(
@@ -37,24 +39,26 @@ func New(
 	}
 
 	return &Server{
-		outputs:   outputs,
-		transfers: transfers,
-		transferz: transferz,
-		logger:    logger.With("server", "rpc"),
-		sf:        &singleflight.Group{},
-		prefix:    cfg.Prefix,
-		addr:      mixin.RequireNewMixAddress([]string{cfg.ClientID}, 1),
+		outputs:       outputs,
+		transfers:     transfers,
+		transferz:     transferz,
+		logger:        logger.With("server", "rpc"),
+		sf:            &singleflight.Group{},
+		prefix:        cfg.Prefix,
+		blockedAssets: mapset.Of(cfg.BlockedAssets...),
+		addr:          mixin.RequireNewMixAddress([]string{cfg.ClientID}, 1),
 	}
 }
 
 type Server struct {
-	outputs   core.OutputStore
-	transfers core.TransferStore
-	transferz core.TransferService
-	logger    *slog.Logger
-	sf        *singleflight.Group
-	addr      *mixin.MixAddress
-	prefix    string
+	outputs       core.OutputStore
+	transfers     core.TransferStore
+	transferz     core.TransferService
+	logger        *slog.Logger
+	sf            *singleflight.Group
+	addr          *mixin.MixAddress
+	blockedAssets mapset.Set[string]
+	prefix        string
 }
 
 func (s *Server) Handler() (string, http.Handler) {
@@ -76,6 +80,10 @@ func (s *Server) FindTransfer(ctx context.Context, req *safewallet.FindTransferR
 }
 
 func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTransferRequest) (*safewallet.CreateTransferResponse, error) {
+	if s.blockedAssets.Has(req.AssetId) {
+		return nil, twirp.Aborted.Error("asset is blocked")
+	}
+
 	transfer := &core.Transfer{
 		TraceID:  req.TraceId,
 		Status:   core.TransferStatusPending,
@@ -85,12 +93,12 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 		Opponent: generic.Try(mixin.NewMixAddress(req.Opponents, uint8(max(req.Threshold, 1)))),
 	}
 
-	if _, err := uuid.Parse(req.TraceId); err != nil {
-		return nil, twirp.InvalidArgument.Error("invalid trace id")
-	}
-
 	if _, err := uuid.Parse(req.AssetId); err != nil {
 		return nil, twirp.InvalidArgument.Error("invalid asset id")
+	}
+
+	if _, err := uuid.Parse(req.TraceId); err != nil {
+		return nil, twirp.InvalidArgument.Error("invalid trace id")
 	}
 
 	if !transfer.Amount.IsPositive() || transfer.Amount.Truncate(8).LessThan(transfer.Amount) {

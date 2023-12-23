@@ -26,8 +26,9 @@ func provideRpcConfig(ks *mixin.Keystore) rpc.Config {
 	viper.SetDefault("rpc.prefix", "/twirp")
 
 	return rpc.Config{
-		ClientID: ks.ClientID,
-		Prefix:   viper.GetString("rpc.prefix"),
+		ClientID:      ks.ClientID,
+		Prefix:        viper.GetString("rpc.prefix"),
+		BlockedAssets: viper.GetStringSlice("rpc.blocked_assets"),
 	}
 }
 
