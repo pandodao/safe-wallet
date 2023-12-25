@@ -8,7 +8,7 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/fox-one/mixin-sdk-go/v2 v2.0.2
 	github.com/go-chi/chi/v5 v5.0.10
-	github.com/golang-migrate/migrate/v4 v4.16.2
+	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/google/uuid v1.4.0
 	github.com/google/wire v0.5.0
 	github.com/lib/pq v1.10.9
