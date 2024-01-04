@@ -13,6 +13,7 @@ import (
 	output2 "github.com/pandodao/safe-wallet/store/output"
 	"github.com/pandodao/safe-wallet/store/transfer"
 	"github.com/pandodao/safe-wallet/worker/cashier"
+	"github.com/pandodao/safe-wallet/worker/cleaner"
 	"github.com/pandodao/safe-wallet/worker/syncer"
 	"github.com/spf13/viper"
 	"log/slog"
@@ -42,9 +43,11 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	}
 	transferService := transfer2.New(assetService, client, key)
 	cashierCashier := cashier.New(outputStore, transferStore, transferService, logger)
+	cleanerCleaner := cleaner.New(outputStore, outputService, logger)
 	mainApp := app{
 		syncer:  syncerSyncer,
 		cashier: cashierCashier,
+		cleaner: cleanerCleaner,
 		logger:  logger,
 	}
 	return mainApp, func() {

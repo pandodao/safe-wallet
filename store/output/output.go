@@ -119,6 +119,14 @@ func (s *store) ListRange(ctx context.Context, assetID string, from, to uint64) 
 	return outputs, nil
 }
 
+func (s *store) Clean(ctx context.Context, assetID string, offset uint64) error {
+	b := sq.Delete("outputs").
+		Where("asset_id = ? AND sequence < ?", assetID, offset)
+	stmt, args := b.MustSql()
+	_, err := s.db.ExecContext(ctx, stmt, args...)
+	return err
+}
+
 func (s *store) SumBalance(ctx context.Context, asset string) (*core.Balance, error) {
 	b := sq.Select("outputs.asset_id", "SUM(outputs.amount)").
 		From("outputs").

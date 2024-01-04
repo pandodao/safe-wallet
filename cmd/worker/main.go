@@ -12,6 +12,7 @@ import (
 
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/pandodao/safe-wallet/worker/cashier"
+	"github.com/pandodao/safe-wallet/worker/cleaner"
 	"github.com/pandodao/safe-wallet/worker/syncer"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -65,6 +66,10 @@ func main() {
 		return app.cashier.Run(ctx)
 	})
 
+	g.Go(func() error {
+		return app.cleaner.Run(ctx)
+	})
+
 	if err := g.Wait(); err != nil {
 		logger.Error("worker exit", "err", err)
 	}
@@ -73,6 +78,7 @@ func main() {
 type app struct {
 	syncer  *syncer.Syncer
 	cashier *cashier.Cashier
+	cleaner *cleaner.Cleaner
 	logger  *slog.Logger
 }
 
