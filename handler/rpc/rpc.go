@@ -134,14 +134,14 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 		return err
 	}
 
-	if status, err := s.transferz.InspectStatus(ctx, transfer.TraceID); err != nil {
-		logger.Error("inspectTransferStatus", "err", err)
-		return err
-	} else if status > core.TransferStatusPending {
-		logger.Debug("transfer already handled", "status", status)
-		transfer.Status = status
-		return nil
-	}
+	// if status, err := s.transferz.InspectStatus(ctx, transfer.TraceID); err != nil {
+	// 	logger.Error("inspectTransferStatus", "err", err)
+	// 	return err
+	// } else if status > core.TransferStatusPending {
+	// 	logger.Debug("transfer already handled", "status", status)
+	// 	transfer.Status = status
+	// 	return nil
+	// }
 
 	offset, err := s.transfers.GetAssignOffset(ctx, transfer.AssetID)
 	if err != nil {
