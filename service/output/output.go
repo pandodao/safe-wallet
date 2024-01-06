@@ -108,6 +108,15 @@ func (s *service) FlushSigned(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
+	req, err = s.client.SafeCreateMultisigRequest(ctx, &mixin.SafeTransactionRequestInput{
+		RequestID:      req.RequestID,
+		RawTransaction: req.RawTransaction,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
 	tx, err := mixinnet.TransactionFromRaw(req.RawTransaction)
 	if err != nil {
 		return 0, err
