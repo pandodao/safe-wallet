@@ -27,7 +27,11 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	if err != nil {
 		return app{}, nil, err
 	}
-	outputService := output.New(client)
+	key, err := provideSpendKey(v)
+	if err != nil {
+		return app{}, nil, err
+	}
+	outputService := output.New(client, key)
 	db, cleanup, err := provideDB(v)
 	if err != nil {
 		return app{}, nil, err
@@ -36,11 +40,6 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	syncerSyncer := syncer.New(outputService, outputStore, logger)
 	transferStore := transfer.New(db)
 	assetService := asset.New(client)
-	key, err := provideSpendKey(v)
-	if err != nil {
-		cleanup()
-		return app{}, nil, err
-	}
 	transferService := transfer2.New(assetService, client, key)
 	cashierCashier := cashier.New(outputStore, outputService, transferStore, transferService, logger)
 	cleanerCleaner := cleaner.New(outputStore, outputService, logger)

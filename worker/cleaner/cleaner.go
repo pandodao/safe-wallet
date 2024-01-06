@@ -45,6 +45,18 @@ func (w *Cleaner) Run(ctx context.Context) error {
 }
 
 func (w *Cleaner) run(ctx context.Context) error {
+	n, err := w.outputz.FlushSigned(ctx)
+	if err != nil {
+		w.logger.Error("outputz.FlushSigned", "err", err)
+		return err
+	}
+
+	if n > 0 {
+		w.logger.Info("flush signed outputs", "count", n)
+		// keep on flush signed outputs
+		return nil
+	}
+
 	assets := mapset.New[string]()
 
 	var seq uint64
