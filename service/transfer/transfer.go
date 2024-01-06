@@ -80,12 +80,6 @@ func (s *service) InspectStatus(ctx context.Context, traceID string) (core.Trans
 }
 
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
-	if status, err := s.InspectStatus(ctx, transfer.TraceID); err != nil {
-		return err
-	} else if status > core.TransferStatusPending {
-		return nil
-	}
-
 	asset, err := s.assetz.Find(ctx, transfer.AssetID)
 	if err != nil {
 		return err
@@ -134,7 +128,7 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 	}
 
 	// prepare transaction
-	prepareReq, err := s.client.SafeCreateTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
+	req, err := s.client.SafeCreateTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
 		RequestID:      transfer.TraceID,
 		RawTransaction: generic.Must(tx.Dump()),
 	})
@@ -143,12 +137,8 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 		return fmt.Errorf("create transaction request failed: %w", err)
 	}
 
-	if prepareReq.State == mixin.SafeUtxoStateSpent {
-		return nil
-	}
-
 	// sign transaction
-	if err := mixin.SafeSignTransaction(tx, s.spendKey, prepareReq.Views, 0); err != nil {
+	if err := mixin.SafeSignTransaction(tx, s.spendKey, req.Views, 0); err != nil {
 		return fmt.Errorf("sign transaction failed: %w", err)
 	}
 
