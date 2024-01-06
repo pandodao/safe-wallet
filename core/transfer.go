@@ -42,6 +42,5 @@ type TransferStore interface {
 
 type TransferService interface {
 	Find(ctx context.Context, traceID string) (*Transfer, error)
-	InspectStatus(ctx context.Context, traceID string) (TransferStatus, error)
 	Spend(ctx context.Context, transfer *Transfer, outputs []*Output) error
 }

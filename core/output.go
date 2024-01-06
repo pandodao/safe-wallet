@@ -35,4 +35,5 @@ type OutputStore interface {
 type OutputService interface {
 	Pull(ctx context.Context, offset uint64, limit int) ([]*Output, error)
 	ListRange(ctx context.Context, assetID string, from, to uint64) ([]*Output, error)
+	FlushSigned(ctx context.Context) (int, error)
 }

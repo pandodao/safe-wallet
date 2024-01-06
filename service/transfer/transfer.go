@@ -59,26 +59,6 @@ func (s *service) Find(ctx context.Context, traceID string) (*core.Transfer, err
 	return transfer, nil
 }
 
-func (s *service) InspectStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
-	req, err := s.client.SafeReadTransactionRequest(ctx, traceID)
-	if err != nil {
-		if mixin.IsErrorCodes(err, mixin.EndpointNotFound) {
-			return core.TransferStatusPending, nil
-		}
-
-		return 0, err
-	}
-
-	switch req.State {
-	case mixin.SafeUtxoStateSigned:
-		return core.TransferStatusAssigned, nil
-	case mixin.SafeUtxoStateSpent:
-		return core.TransferStatusHandled, nil
-	default:
-		return core.TransferStatusPending, nil
-	}
-}
-
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
 	asset, err := s.assetz.Find(ctx, transfer.AssetID)
 	if err != nil {
