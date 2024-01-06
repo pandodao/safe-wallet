@@ -85,6 +85,11 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 		return err
 	}
 
+	if len(outputs) == 0 {
+		logger.Error("spend outputs dry", "from", transfer.AssignRange[0], "to", transfer.AssignRange[1])
+		return fmt.Errorf("spend outputs dry")
+	}
+
 	logger.Debug("assigned outputs loaded", "count", len(outputs))
 
 	if err := w.transferz.Spend(ctx, transfer, outputs); err != nil {
