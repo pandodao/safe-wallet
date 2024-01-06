@@ -13,12 +13,14 @@ import (
 
 func New(
 	outputs core.OutputStore,
+	outputz core.OutputService,
 	transfers core.TransferStore,
 	transferz core.TransferService,
 	logger *slog.Logger,
 ) *Cashier {
 	return &Cashier{
 		outputs:   outputs,
+		outputz:   outputz,
 		transfers: transfers,
 		transferz: transferz,
 		logger:    logger.With("worker", "cashier"),
@@ -27,6 +29,7 @@ func New(
 
 type Cashier struct {
 	outputs   core.OutputStore
+	outputz   core.OutputService
 	transfers core.TransferStore
 	transferz core.TransferService
 	logger    *slog.Logger
@@ -83,6 +86,14 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 	if err != nil {
 		logger.Error("outputs.ListRange", "err", err)
 		return err
+	}
+
+	if len(outputs) == 0 {
+		outputs, err = w.outputz.ListRange(ctx, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
+		if err != nil {
+			logger.Error("outputz.ListRange", "err", err)
+			return err
+		}
 	}
 
 	if len(outputs) == 0 {
