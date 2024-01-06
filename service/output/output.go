@@ -122,7 +122,7 @@ func (s *service) FlushSigned(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	if _, err := s.client.SafeSignMultisigRequest(ctx, &mixin.SafeTransactionRequestInput{
+	if _, err := s.client.SafeSubmitTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
 		RequestID:      req.RequestID,
 		RawTransaction: hex.EncodeToString(raw),
 	}); err != nil {
