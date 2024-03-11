@@ -21,7 +21,7 @@ require (
 	github.com/twitchtv/twirp v8.1.3+incompatible
 	github.com/zyedidia/generic v1.2.1
 	golang.org/x/sync v0.5.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
