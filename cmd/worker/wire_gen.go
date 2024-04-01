@@ -27,7 +27,7 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	if err != nil {
 		return app{}, nil, err
 	}
-	key, err := provideSpendKey(v)
+	key, err := provideSpendKey(v, client)
 	if err != nil {
 		return app{}, nil, err
 	}

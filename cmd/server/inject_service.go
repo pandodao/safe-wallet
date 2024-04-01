@@ -21,9 +21,10 @@ var serviceSet = wire.NewSet(
 
 func provideKeystore(v *viper.Viper) *mixin.Keystore {
 	return &mixin.Keystore{
-		ClientID:   v.GetString("dapp.client_id"),
-		SessionID:  v.GetString("dapp.session_id"),
-		PrivateKey: v.GetString("dapp.private_key"),
+		ClientID:          v.GetString("dapp.client_id"),
+		SessionID:         v.GetString("dapp.session_id"),
+		PrivateKey:        v.GetString("dapp.private_key"),
+		SessionPrivateKey: v.GetString("dapp.session_private_key"),
 	}
 }
 

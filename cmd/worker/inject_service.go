@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
 	"github.com/google/wire"
@@ -21,9 +23,10 @@ var serviceSet = wire.NewSet(
 
 func provideKeystore(v *viper.Viper) *mixin.Keystore {
 	return &mixin.Keystore{
-		ClientID:   v.GetString("dapp.client_id"),
-		SessionID:  v.GetString("dapp.session_id"),
-		PrivateKey: v.GetString("dapp.private_key"),
+		ClientID:          v.GetString("dapp.client_id"),
+		SessionID:         v.GetString("dapp.session_id"),
+		PrivateKey:        v.GetString("dapp.private_key"),
+		SessionPrivateKey: v.GetString("dapp.session_private_key"),
 	}
 }
 
@@ -31,7 +34,12 @@ func provideMixinClient(ks *mixin.Keystore) (*mixin.Client, error) {
 	return mixin.NewFromKeystore(ks)
 }
 
-func provideSpendKey(v *viper.Viper) (mixinnet.Key, error) {
+func provideSpendKey(v *viper.Viper, client *mixin.Client) (mixinnet.Key, error) {
+	user, err := client.UserMe(context.Background())
+	if err != nil {
+		return mixinnet.Key{}, err
+	}
+
 	s := v.GetString("dapp.spend_key")
-	return mixinnet.KeyFromString(s)
+	return mixinnet.ParseKeyWithPub(s, user.SpendPublicKey)
 }
