@@ -2,6 +2,7 @@ dapp:
   client_id: 69c6a13b-d38e-4b7c-8f39-32933a6dfb1f
   session_id: 3c494d5c-0331-4a08-a364-57e0f56e62a4
   private_key: private key
+  session_private_key: session private key
 
 db:
   driver: mysql
