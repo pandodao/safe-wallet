@@ -90,22 +90,10 @@ func (s *service) ListRange(ctx context.Context, assetID string, from, to uint64
 	return outputs, nil
 }
 
-func (s *service) FlushSigned(ctx context.Context) (int, error) {
-	utxos, err := s.client.SafeListUtxos(ctx, mixin.SafeListUtxoOption{
-		Members:   []string{s.client.ClientID},
-		Threshold: 1,
-		Limit:     1,
-		Order:     "ASC",
-		State:     mixin.SafeUtxoStateSigned,
-	})
-	if err != nil || len(utxos) == 0 {
-		return 0, err
-	}
-
-	utxo := utxos[0]
-	req, err := s.client.SafeReadMultisigRequests(ctx, utxo.SignedBy)
+func (s *service) submit(ctx context.Context, signedBy string) error {
+	req, err := s.client.SafeReadMultisigRequests(ctx, signedBy)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	req, err = s.client.SafeCreateMultisigRequest(ctx, &mixin.SafeTransactionRequestInput{
@@ -114,29 +102,44 @@ func (s *service) FlushSigned(ctx context.Context) (int, error) {
 	})
 
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	tx, err := mixinnet.TransactionFromRaw(req.RawTransaction)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if err := mixin.SafeSignTransaction(tx, s.spendKey, req.Views, 0); err != nil {
-		return 0, err
+		return err
 	}
 
 	raw, err := tx.DumpData()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if _, err := s.client.SafeSubmitTransactionRequest(ctx, &mixin.SafeTransactionRequestInput{
 		RequestID:      req.RequestID,
 		RawTransaction: hex.EncodeToString(raw),
 	}); err != nil {
-		return 0, err
+		return err
 	}
 
-	return 1, nil
+	return nil
+}
+
+func (s *service) ReadState(ctx context.Context, output *core.Output) (string, error) {
+	utxo, err := s.client.SafeReadUtxoByHash(ctx, output.Hash, output.Index)
+	if err != nil {
+		return "", err
+	}
+
+	if utxo.State == mixin.SafeUtxoStateSigned {
+		if err := s.submit(ctx, utxo.SignedBy); err != nil {
+			return "", err
+		}
+	}
+
+	return string(utxo.State), nil
 }

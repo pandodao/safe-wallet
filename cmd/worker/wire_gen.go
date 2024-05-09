@@ -42,7 +42,8 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	assetService := asset.New(client)
 	transferService := transfer2.New(assetService, client, key)
 	cashierCashier := cashier.New(outputStore, outputService, transferStore, transferService, logger)
-	cleanerCleaner := cleaner.New(outputStore, outputService, logger)
+	config := provideCleanerConfig(v, keystore)
+	cleanerCleaner := cleaner.New(outputStore, outputService, transferStore, logger, config)
 	mainApp := app{
 		syncer:  syncerSyncer,
 		cashier: cashierCashier,

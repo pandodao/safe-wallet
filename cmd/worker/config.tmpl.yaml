@@ -8,3 +8,6 @@ dapp:
 db:
   driver: mysql
   dsn: root:root@tcp
+
+cleaner:
+  capacity: 512

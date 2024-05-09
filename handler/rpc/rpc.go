@@ -152,7 +152,7 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	logger.Debug("GetAssignOffset", "offset", offset)
 
 	const limit = 256
-	outputs, err := s.outputs.List(ctx, offset, transfer.AssetID, transfer.Amount, limit)
+	outputs, err := s.outputs.ListTarget(ctx, offset, transfer.AssetID, transfer.Amount, limit)
 	if err != nil {
 		logger.Error("outputs.List", "err", err)
 		return err
