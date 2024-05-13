@@ -125,7 +125,7 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 }
 
 func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) error {
-	logger := s.logger.With("transfer", transfer.TraceID)
+	logger := s.logger.With("id", transfer.TraceID, "asset", transfer.AssetID, "amount", transfer.Amount)
 
 	if _, err := s.transfers.FindTrace(ctx, transfer.TraceID); err == nil {
 		return nil
@@ -152,7 +152,7 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	logger.Debug("GetAssignOffset", "offset", offset)
 
 	const limit = 256
-	outputs, err := s.outputs.List(ctx, offset, transfer.AssetID, transfer.Amount, limit)
+	outputs, err := s.outputs.ListTarget(ctx, offset, transfer.AssetID, transfer.Amount, limit)
 	if err != nil {
 		logger.Error("outputs.List", "err", err)
 		return err

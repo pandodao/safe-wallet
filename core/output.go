@@ -20,14 +20,16 @@ type Output struct {
 type Balance struct {
 	AssetID string          `json:"asset_id,omitempty"`
 	Amount  decimal.Decimal `json:"amount"`
+	Count   int             `json:"count"`
 }
 
 type OutputStore interface {
 	GetOffset(ctx context.Context) (uint64, error)
 	Save(ctx context.Context, outputs []*Output) error
-	List(ctx context.Context, offset uint64, assetID string, target decimal.Decimal, limit int) ([]*Output, error)
+	List(ctx context.Context, offset uint64, limit int) ([]*Output, error)
+	ListTarget(ctx context.Context, offset uint64, assetID string, target decimal.Decimal, limit int) ([]*Output, error)
 	ListRange(ctx context.Context, assetID string, from, to uint64) ([]*Output, error)
-	Clean(ctx context.Context, assetID string, offset uint64) error
+	Delete(ctx context.Context, seq uint64) error
 	SumBalance(ctx context.Context, asset string) (*Balance, error)
 	SumBalances(ctx context.Context) ([]*Balance, error)
 }
@@ -35,5 +37,5 @@ type OutputStore interface {
 type OutputService interface {
 	Pull(ctx context.Context, offset uint64, limit int) ([]*Output, error)
 	ListRange(ctx context.Context, assetID string, from, to uint64) ([]*Output, error)
-	FlushSigned(ctx context.Context) (int, error)
+	ReadState(ctx context.Context, output *Output) (string, error)
 }
