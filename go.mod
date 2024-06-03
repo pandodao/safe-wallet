@@ -16,7 +16,7 @@ require (
 	github.com/pandodao/generic v1.0.3
 	github.com/rs/cors v1.11.0
 	github.com/shopspring/decimal v1.4.0
-	github.com/spf13/viper v1.18.2
+	github.com/spf13/viper v1.19.0
 	github.com/tsenart/nap v0.0.0-20190313104555-a650a3fbb7be
 	github.com/twitchtv/twirp v8.1.3+incompatible
 	github.com/zyedidia/generic v1.2.1
