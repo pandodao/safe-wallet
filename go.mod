@@ -6,8 +6,8 @@ require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/carlmjohnson/versioninfo v0.22.5
-	github.com/fox-one/mixin-sdk-go/v2 v2.0.6
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/fox-one/mixin-sdk-go/v2 v2.0.9
+	github.com/go-chi/chi/v5 v5.1.0
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
@@ -16,12 +16,12 @@ require (
 	github.com/pandodao/generic v1.0.3
 	github.com/rs/cors v1.11.0
 	github.com/shopspring/decimal v1.4.0
-	github.com/spf13/viper v1.18.2
+	github.com/spf13/viper v1.19.0
 	github.com/tsenart/nap v0.0.0-20190313104555-a650a3fbb7be
 	github.com/twitchtv/twirp v8.1.3+incompatible
 	github.com/zyedidia/generic v1.2.1
-	golang.org/x/sync v0.7.0
-	google.golang.org/protobuf v1.34.1
+	golang.org/x/sync v0.8.0
+	google.golang.org/protobuf v1.34.2
 )
 
 require (

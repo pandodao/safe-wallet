@@ -15,6 +15,8 @@ var scanColumns = []string{
 	"created_at",
 	"hash",
 	"`index`",
+	"user_id",
+	"app_id",
 	"asset_id",
 	"amount",
 }
@@ -27,6 +29,8 @@ func scanOutput(scanner scanner, output *core.Output) error {
 		&output.CreatedAt,
 		&hash,
 		&output.Index,
+		&output.UserID,
+		&output.AppID,
 		&output.AssetID,
 		&output.Amount,
 	); err != nil {

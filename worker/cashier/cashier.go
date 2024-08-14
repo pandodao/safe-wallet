@@ -82,7 +82,7 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 
 	logger.Info("handle transfer", "asset", transfer.AssetID, "amount", transfer.Amount)
 
-	outputs, err := w.outputs.ListRange(ctx, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
+	outputs, err := w.outputs.ListRange(ctx, transfer.UserID, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
 	if err != nil {
 		logger.Error("outputs.ListRange", "err", err)
 		return err

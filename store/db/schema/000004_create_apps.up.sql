@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS `apps` (
+    `id` char(36) NOT NULL,
+    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `offset` bigint NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;

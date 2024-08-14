@@ -6,7 +6,7 @@ import (
 
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
-	"github.com/pandodao/safe-wallet/core"
+	"github.com/pandodao/safe-wallet/core"                                                                                     
 )
 
 func New(client *mixin.Client, key mixinnet.Key) core.OutputService {
