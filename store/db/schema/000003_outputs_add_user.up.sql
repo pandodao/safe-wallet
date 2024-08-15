@@ -3,11 +3,7 @@ ALTER TABLE
 ADD
     COLUMN `user_id` char(36) NOT NULL
 AFTER
-    `index`,
-ADD
-    COLUMN `app_id` char(36) NOT NULL
-AFTER
-    `user_id`;
+    `index`;
 
 ALTER TABLE
     `outputs` DROP INDEX `idx_outputs_asset`;

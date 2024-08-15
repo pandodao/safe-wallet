@@ -1,14 +1,8 @@
 ALTER TABLE
-    `outputs` DROP INDEX `idx_outputs_user_asset`;
-
-ALTER TABLE
-    `outputs`
+    `outputs` DROP INDEX `idx_outputs_user_asset`,
 ADD
-    INDEX `idx_outputs_asset` (`asset_id`);
-
-ALTER TABLE
-    `outputs` DROP COLUMN `user_id`,
-    DROP COLUMN `app_id`;
+    INDEX `idx_outputs_asset` (`asset_id`),
+    DROP COLUMN `user_id`;
 
 ALTER TABLE
     `transfers` DROP COLUMN `user_id`;

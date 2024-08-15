@@ -4,19 +4,21 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"sync"
 
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
 	"github.com/pandodao/generic"
 	"github.com/pandodao/safe-wallet/core"
 	"github.com/shopspring/decimal"
+	"github.com/zyedidia/generic/cache"
 )
 
-func New(assetz core.AssetService, client *mixin.Client, key mixinnet.Key) core.TransferService {
+func New(client *mixin.Client, key mixinnet.Key) core.TransferService {
 	return &service{
 		client:   client,
 		spendKey: key,
-		assetz:   assetz,
+		hashes:   cache.New[string, mixinnet.Hash](256),
 	}
 }
 
@@ -24,43 +26,42 @@ type service struct {
 	client   *mixin.Client
 	spendKey mixinnet.Key
 
-	assetz core.AssetService
+	hashes *cache.Cache[string, mixinnet.Hash]
+	mux    sync.RWMutex
 }
 
-func (s *service) Find(ctx context.Context, traceID string) (*core.Transfer, error) {
-	req, err := s.client.SafeReadTransactionRequest(ctx, traceID)
+func (s *service) getAssetHash(ctx context.Context, assetID string) (mixinnet.Hash, error) {
+	s.mux.RLock()
+	v, ok := s.hashes.Get(assetID)
+	s.mux.RUnlock()
+
+	if ok {
+		return v, nil
+	}
+
+	asset, err := s.client.SafeReadAsset(ctx, assetID)
 	if err != nil {
-		return nil, err
+		return v, err
 	}
 
-	receiver := req.Receivers[0]
-	opponent := mixin.RequireNewMixAddress(receiver.Members, receiver.Threshold)
-
-	tx := generic.Must(mixinnet.TransactionFromRaw(req.RawTransaction))
-	amount := generic.Must(decimal.NewFromString(tx.Outputs[0].Amount.String()))
-
-	transfer := &core.Transfer{
-		CreatedAt: req.CreatedAt,
-		TraceID:   req.RequestID,
-		Status:    core.TransferStatusPending,
-		AssetID:   req.Asset.String(),
-		Amount:    amount,
-		Memo:      string(generic.Must(hex.DecodeString(req.Extra))),
-		Opponent:  opponent,
+	v, err = mixinnet.HashFromString(asset.KernelAssetID)
+	if err != nil {
+		return v, err
 	}
 
-	switch req.State {
-	case mixin.SafeUtxoStateSigned:
-		transfer.Status = core.TransferStatusAssigned
-	case mixin.SafeUtxoStateSpent:
-		transfer.Status = core.TransferStatusHandled
-	}
+	s.mux.Lock()
+	s.hashes.Put(assetID, v)
+	s.mux.Unlock()
 
-	return transfer, nil
+	return v, nil
 }
 
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
-	asset, err := s.assetz.Find(ctx, transfer.AssetID)
+	if s.client.ClientID != transfer.UserID {
+		panic("transfer user id not match")
+	}
+
+	assetHash, err := s.getAssetHash(ctx, transfer.AssetID)
 	if err != nil {
 		return err
 	}
@@ -71,12 +72,16 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 	)
 
 	for _, output := range outputs {
+		if output.UserID != transfer.UserID {
+			panic("output user id not match")
+		}
+
 		utxos = append(utxos, &mixin.SafeUtxo{
 			TransactionHash:    output.Hash,
 			OutputIndex:        output.Index,
-			KernelAssetID:      asset.Hash,
+			KernelAssetID:      assetHash,
 			Amount:             output.Amount,
-			Receivers:          []string{s.client.ClientID},
+			Receivers:          []string{output.UserID},
 			ReceiversThreshold: 1,
 		})
 
