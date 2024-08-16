@@ -20,7 +20,6 @@ func provideCleanerConfig(v *viper.Viper, ks *mixin.Keystore) cleaner.Config {
 	v.SetDefault("cleaner.capacity", 512)
 
 	return cleaner.Config{
-		Receiver: mixin.RequireNewMixAddress([]string{ks.ClientID}, 1),
 		Capacity: v.GetInt("cleaner.capacity"),
 	}
 }

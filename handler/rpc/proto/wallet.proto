@@ -21,6 +21,7 @@ message Transfer {
   string memo = 6;
   repeated string opponents = 7;
   uint32 threshold = 8;
+  string user_id = 9;
 }
 
 message CreateTransferRequest {
@@ -30,6 +31,7 @@ message CreateTransferRequest {
   string memo = 4;
   repeated string opponents = 5;
   uint32 threshold = 6;
+  string user_id = 7;
 }
 
 message CreateTransferResponse {
@@ -44,7 +46,17 @@ message FindTransferResponse {
   Transfer transfer = 1;
 }
 
+message CreateWalletRequest {
+  string label = 1;
+}
+
+message CreateWalletResponse {
+  string user_id = 1;
+  string label = 2;
+}
+
 service SafeWalletService {
   rpc CreateTransfer(CreateTransferRequest) returns (CreateTransferResponse);
   rpc FindTransfer(FindTransferRequest) returns (FindTransferResponse);
+  rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse);
 }

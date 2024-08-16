@@ -4,6 +4,7 @@ import "context"
 
 type Wallet struct {
 	UserID     string `json:"user_id"`
+	Label      string `json:"label"`
 	SessionID  string `json:"session_id"`
 	PrivateKey string `json:"private_key"`
 	PinToken   string `json:"pin_token"`
@@ -17,5 +18,10 @@ type WalletStore interface {
 }
 
 type WalletService interface {
-	Create(ctx context.Context) (*Wallet, error)
+	Create(ctx context.Context, label string) (*Wallet, error)
+}
+
+type ServiceLoader interface {
+	LoadOutput(ctx context.Context, userID string) (OutputService, error)
+	LoadTransfer(ctx context.Context, userID string) (TransferService, error)
 }

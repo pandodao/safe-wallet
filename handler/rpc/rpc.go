@@ -22,7 +22,7 @@ import (
 )
 
 type Config struct {
-	ClientID      string   `valid:"uuid,required"`
+	ClientID      string   `valid:"required"`
 	Prefix        string   `valid:"required"`
 	BlockedAssets []string `valid:"uuid"`
 }
@@ -30,7 +30,8 @@ type Config struct {
 func New(
 	outputs core.OutputStore,
 	transfers core.TransferStore,
-	transferz core.TransferService,
+	wallets core.WalletStore,
+	walletz core.WalletService,
 	logger *slog.Logger,
 	cfg Config,
 ) *Server {
@@ -41,24 +42,26 @@ func New(
 	return &Server{
 		outputs:       outputs,
 		transfers:     transfers,
-		transferz:     transferz,
+		wallets:       wallets,
+		walletz:       walletz,
 		logger:        logger.With("server", "rpc"),
 		sf:            &singleflight.Group{},
 		prefix:        cfg.Prefix,
 		blockedAssets: mapset.Of(cfg.BlockedAssets...),
-		addr:          mixin.RequireNewMixAddress([]string{cfg.ClientID}, 1),
+		defaultUserID: cfg.ClientID,
 	}
 }
 
 type Server struct {
 	outputs       core.OutputStore
 	transfers     core.TransferStore
-	transferz     core.TransferService
+	wallets       core.WalletStore
+	walletz       core.WalletService
 	logger        *slog.Logger
 	sf            *singleflight.Group
-	addr          *mixin.MixAddress
 	blockedAssets mapset.Set[string]
 	prefix        string
+	defaultUserID string
 }
 
 func (s *Server) Handler() (string, http.Handler) {
@@ -84,8 +87,13 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 		return nil, twirp.Aborted.Error("asset is blocked")
 	}
 
+	if req.UserId == "" {
+		req.UserId = s.defaultUserID
+	}
+
 	transfer := &core.Transfer{
 		TraceID:  req.TraceId,
+		UserID:   req.UserId,
 		Status:   core.TransferStatusPending,
 		AssetID:  req.AssetId,
 		Amount:   generic.Try(decimal.NewFromString(req.Amount)),
@@ -143,7 +151,7 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	// 	return nil
 	// }
 
-	offset, err := s.transfers.GetAssignOffset(ctx, transfer.AssetID)
+	offset, err := s.transfers.GetAssignOffset(ctx, transfer.UserID, transfer.AssetID)
 	if err != nil {
 		logger.Error("transfers.GetAssignOffset", "err", err)
 		return err
@@ -152,7 +160,7 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	logger.Debug("GetAssignOffset", "offset", offset)
 
 	const limit = 256
-	outputs, err := s.outputs.ListTarget(ctx, offset, transfer.AssetID, transfer.Amount, limit)
+	outputs, err := s.outputs.ListTarget(ctx, transfer.UserID, transfer.AssetID, offset, transfer.Amount, limit)
 	if err != nil {
 		logger.Error("outputs.List", "err", err)
 		return err
@@ -187,10 +195,11 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 			merge := &core.Transfer{
 				TraceID:     trace.String(),
 				Status:      core.TransferStatusPending,
+				UserID:      transfer.UserID,
 				AssetID:     transfer.AssetID,
 				Amount:      sum,
 				Memo:        memo,
-				Opponent:    s.addr,
+				Opponent:    mixin.RequireNewMixAddress([]string{transfer.UserID}, 1),
 				AssignRange: ranges,
 			}
 
@@ -212,11 +221,32 @@ func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) er
 	return nil
 }
 
+func (s *Server) CreateWallet(ctx context.Context, req *safewallet.CreateWalletRequest) (*safewallet.CreateWalletResponse, error) {
+	s.logger.Debug("create new wallet", "label", req.Label)
+
+	wallet, err := s.walletz.Create(ctx, req.Label)
+	if err != nil {
+		s.logger.Error("walletz.Create", "err", err)
+		return nil, err
+	}
+
+	if err := s.wallets.Create(ctx, wallet); err != nil {
+		s.logger.Error("wallets.Create", "err", err)
+		return nil, err
+	}
+
+	return &safewallet.CreateWalletResponse{
+		UserId: wallet.UserID,
+		Label:  wallet.Label,
+	}, nil
+}
+
 func viewTransfer(transfer *core.Transfer) *safewallet.Transfer {
 	return &safewallet.Transfer{
 		TraceId:   transfer.TraceID,
 		CreatedAt: timestamppb.New(transfer.CreatedAt),
 		Status:    safewallet.Transfer_Status(transfer.Status),
+		UserId:    transfer.UserID,
 		AssetId:   transfer.AssetID,
 		Amount:    transfer.Amount.String(),
 		Memo:      transfer.Memo,

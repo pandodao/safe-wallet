@@ -5,6 +5,7 @@ import (
 	"github.com/pandodao/safe-wallet/store/db"
 	"github.com/pandodao/safe-wallet/store/output"
 	"github.com/pandodao/safe-wallet/store/transfer"
+	"github.com/pandodao/safe-wallet/store/wallet"
 	"github.com/spf13/viper"
 	"github.com/tsenart/nap"
 )
@@ -13,6 +14,7 @@ var storeSet = wire.NewSet(
 	provideDB,
 	output.New,
 	transfer.New,
+	wallet.New,
 )
 
 func provideDB(v *viper.Viper) (*nap.DB, func(), error) {

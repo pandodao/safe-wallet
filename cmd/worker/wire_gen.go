@@ -7,11 +7,12 @@
 package main
 
 import (
-	"github.com/pandodao/safe-wallet/service/asset"
+	"github.com/pandodao/safe-wallet/service/loader"
 	"github.com/pandodao/safe-wallet/service/output"
-	transfer2 "github.com/pandodao/safe-wallet/service/transfer"
 	output2 "github.com/pandodao/safe-wallet/store/output"
+	"github.com/pandodao/safe-wallet/store/property"
 	"github.com/pandodao/safe-wallet/store/transfer"
+	"github.com/pandodao/safe-wallet/store/wallet"
 	"github.com/pandodao/safe-wallet/worker/cashier"
 	"github.com/pandodao/safe-wallet/worker/cleaner"
 	"github.com/pandodao/safe-wallet/worker/syncer"
@@ -27,23 +28,25 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	if err != nil {
 		return app{}, nil, err
 	}
-	key, err := provideSpendKey(v, client)
-	if err != nil {
-		return app{}, nil, err
-	}
-	outputService := output.New(client, key)
+	outputService := output.New(client)
 	db, cleanup, err := provideDB(v)
 	if err != nil {
 		return app{}, nil, err
 	}
 	outputStore := output2.New(db)
-	syncerSyncer := syncer.New(outputService, outputStore, logger)
+	propertyStore := property.New(db)
+	syncerSyncer := syncer.New(outputService, outputStore, propertyStore, logger)
 	transferStore := transfer.New(db)
-	assetService := asset.New(client)
-	transferService := transfer2.New(assetService, client, key)
-	cashierCashier := cashier.New(outputStore, outputService, transferStore, transferService, logger)
+	walletStore := wallet.New(db)
+	key, err := provideSpendKey(v, client)
+	if err != nil {
+		cleanup()
+		return app{}, nil, err
+	}
+	serviceLoader := loader.New(walletStore, client, key)
+	cashierCashier := cashier.New(outputStore, transferStore, serviceLoader, logger)
 	config := provideCleanerConfig(v, keystore)
-	cleanerCleaner := cleaner.New(outputStore, outputService, transferStore, logger, config)
+	cleanerCleaner := cleaner.New(outputStore, transferStore, outputService, logger, config)
 	mainApp := app{
 		syncer:  syncerSyncer,
 		cashier: cashierCashier,

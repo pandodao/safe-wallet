@@ -30,5 +30,9 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/", s.rt.Handle("CreateTransfer", nil))
 	})
 
+	r.Route("/wallets", func(r chi.Router) {
+		r.Post("/", s.rt.Handle("CreateWallet", nil))
+	})
+
 	return r
 }

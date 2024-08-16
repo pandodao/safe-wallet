@@ -9,10 +9,10 @@ package main
 import (
 	"github.com/pandodao/safe-wallet/handler/api"
 	"github.com/pandodao/safe-wallet/handler/rpc"
-	"github.com/pandodao/safe-wallet/service/asset"
-	transfer2 "github.com/pandodao/safe-wallet/service/transfer"
+	wallet2 "github.com/pandodao/safe-wallet/service/wallet"
 	"github.com/pandodao/safe-wallet/store/output"
 	"github.com/pandodao/safe-wallet/store/transfer"
+	"github.com/pandodao/safe-wallet/store/wallet"
 	"github.com/spf13/viper"
 	"log/slog"
 )
@@ -26,17 +26,16 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	}
 	outputStore := output.New(db)
 	transferStore := transfer.New(db)
+	walletStore := wallet.New(db)
 	keystore := provideKeystore(v)
 	client, err := provideMixinClient(keystore)
 	if err != nil {
 		cleanup()
 		return app{}, nil, err
 	}
-	assetService := asset.New(client)
-	key := provideSpendKey()
-	transferService := transfer2.New(assetService, client, key)
+	walletService := wallet2.New(client)
 	config := provideRpcConfig(keystore)
-	server := rpc.New(outputStore, transferStore, transferService, logger, config)
+	server := rpc.New(outputStore, transferStore, walletStore, walletService, logger, config)
 	apiServer := api.New(server)
 	httpServer := provideServer(apiServer, server)
 	mainApp := app{

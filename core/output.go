@@ -26,7 +26,7 @@ type Balance struct {
 }
 
 type OutputStore interface {
-	GetOffset(ctx context.Context) (uint64, error)
+	GetNextSequence(ctx context.Context, offset uint64) (uint64, error)
 	Save(ctx context.Context, outputs []*Output) error
 	List(ctx context.Context, userID string, offset uint64, limit int) ([]*Output, error)
 	ListTarget(ctx context.Context, userID, assetID string, offset uint64, target decimal.Decimal, limit int) ([]*Output, error)
@@ -36,7 +36,6 @@ type OutputStore interface {
 }
 
 type OutputService interface {
-	Pull(ctx context.Context, offset uint64, limit int) ([]*Output, error)
+	Pull(ctx context.Context, offset uint64, limit int) ([]*Output, uint64, error)
 	ListRange(ctx context.Context, assetID string, from, to uint64) ([]*Output, error)
-	ReadState(ctx context.Context, output *Output) (string, error)
 }

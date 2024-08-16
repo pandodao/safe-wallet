@@ -17,23 +17,28 @@ type service struct {
 	client *mixin.Client
 }
 
-func (s *service) Pull(ctx context.Context, offset uint64, limit int) ([]*core.Output, error) {
+func (s *service) Pull(ctx context.Context, offset uint64, limit int) ([]*core.Output, uint64, error) {
 	utxos, err := s.client.SafeListUtxos(ctx, mixin.SafeListUtxoOption{
 		Members:           []string{s.client.ClientID},
 		Threshold:         1,
 		Offset:            offset,
 		Limit:             limit,
 		Order:             "ASC",
-		State:             mixin.SafeUtxoStateUnspent,
 		IncludeSubWallets: true,
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	outputs := make([]*core.Output, len(utxos))
-	for i, utxo := range utxos {
-		outputs[i] = &core.Output{
+	var outputs []*core.Output
+	for _, utxo := range utxos {
+		offset = utxo.Sequence + 1
+
+		if utxo.State != mixin.SafeUtxoStateUnspent {
+			continue
+		}
+
+		outputs = append(outputs, &core.Output{
 			Sequence:  utxo.Sequence,
 			CreatedAt: utxo.CreatedAt,
 			Hash:      utxo.TransactionHash,
@@ -41,10 +46,10 @@ func (s *service) Pull(ctx context.Context, offset uint64, limit int) ([]*core.O
 			UserID:    utxo.Receivers[0],
 			AssetID:   utxo.AssetID,
 			Amount:    utxo.Amount,
-		}
+		})
 	}
 
-	return outputs, nil
+	return outputs, offset, nil
 }
 
 func (s *service) ListRange(ctx context.Context, assetID string, from, to uint64) ([]*core.Output, error) {
@@ -81,13 +86,4 @@ func (s *service) ListRange(ctx context.Context, assetID string, from, to uint64
 	}
 
 	return outputs, nil
-}
-
-func (s *service) ReadState(ctx context.Context, output *core.Output) (string, error) {
-	utxo, err := s.client.SafeReadUtxoByHash(ctx, output.Hash, output.Index)
-	if err != nil {
-		return "", err
-	}
-
-	return string(utxo.State), nil
 }

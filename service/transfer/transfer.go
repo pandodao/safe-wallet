@@ -4,56 +4,24 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"sync"
 
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
 	"github.com/pandodao/generic"
 	"github.com/pandodao/safe-wallet/core"
 	"github.com/shopspring/decimal"
-	"github.com/zyedidia/generic/cache"
 )
 
-func New(client *mixin.Client, key mixinnet.Key) core.TransferService {
+func New(client *mixin.Client, spendKey mixinnet.Key) core.TransferService {
 	return &service{
 		client:   client,
-		spendKey: key,
-		hashes:   cache.New[string, mixinnet.Hash](256),
+		spendKey: spendKey,
 	}
 }
 
 type service struct {
 	client   *mixin.Client
 	spendKey mixinnet.Key
-
-	hashes *cache.Cache[string, mixinnet.Hash]
-	mux    sync.RWMutex
-}
-
-func (s *service) getAssetHash(ctx context.Context, assetID string) (mixinnet.Hash, error) {
-	s.mux.RLock()
-	v, ok := s.hashes.Get(assetID)
-	s.mux.RUnlock()
-
-	if ok {
-		return v, nil
-	}
-
-	asset, err := s.client.SafeReadAsset(ctx, assetID)
-	if err != nil {
-		return v, err
-	}
-
-	v, err = mixinnet.HashFromString(asset.KernelAssetID)
-	if err != nil {
-		return v, err
-	}
-
-	s.mux.Lock()
-	s.hashes.Put(assetID, v)
-	s.mux.Unlock()
-
-	return v, nil
 }
 
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
@@ -61,7 +29,12 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 		panic("transfer user id not match")
 	}
 
-	assetHash, err := s.getAssetHash(ctx, transfer.AssetID)
+	asset, err := s.getAsset(ctx, transfer.AssetID)
+	if err != nil {
+		return err
+	}
+
+	assetHash, err := mixinnet.HashFromString(asset.KernelAssetID)
 	if err != nil {
 		return err
 	}

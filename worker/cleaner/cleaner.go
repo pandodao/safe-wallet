@@ -2,6 +2,7 @@ package cleaner
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 )
 
 type Config struct {
-	Receiver *mixin.MixAddress
 	Capacity int `valid:"required"`
 }
 
@@ -27,8 +27,8 @@ type Cleaner struct {
 
 func New(
 	outputs core.OutputStore,
-	outputz core.OutputService,
 	transfers core.TransferStore,
+	outputz core.OutputService,
 	logger *slog.Logger,
 	cfg Config,
 ) *Cleaner {
@@ -38,8 +38,8 @@ func New(
 
 	return &Cleaner{
 		outputs:   outputs,
-		outputz:   outputz,
 		transfers: transfers,
+		outputz:   outputz,
 		logger:    logger.With("worker", "cleaner"),
 		cfg:       cfg,
 	}
@@ -60,14 +60,13 @@ func (w *Cleaner) Run(ctx context.Context) error {
 
 func (w *Cleaner) run(ctx context.Context) error {
 	var (
-		// assets 保存轮询到出现 unspent utxo 的 asset，需要跳过
-		assets = mapset.New[string]()
 		offset uint64
+		assets = mapset.New[string]()
 	)
 
 	for {
 		const limit = 500
-		outputs, err := w.outputs.List(ctx, offset, limit)
+		outputs, err := w.outputs.List(ctx, "", offset, limit)
 		if err != nil {
 			w.logger.Error("outputs.List", "err", err)
 			return err
@@ -80,24 +79,26 @@ func (w *Cleaner) run(ctx context.Context) error {
 		for _, output := range outputs {
 			offset = output.Sequence + 1
 
-			if assets.Has(output.AssetID) {
+			key := fmt.Sprintf("%s-%s", output.UserID, output.AssetID)
+			if assets.Has(key) {
 				continue
 			}
 
-			state, err := w.outputz.ReadState(ctx, output)
+			outputs, _, err := w.outputz.Pull(ctx, output.Sequence, 1)
 			if err != nil {
-				w.logger.Error("outputz.ReadState", "err", err)
+				w.logger.Error("outputz.Pull", "err", err)
 				return err
 			}
 
-			switch mixin.SafeUtxoState(state) {
-			case mixin.SafeUtxoStateSpent:
-				if err := w.outputs.Delete(ctx, output.Sequence); err != nil {
-					w.logger.Error("outputs.Delete", "seq", output.Sequence, "err", err)
-					return err
-				}
-			default:
-				assets.Put(output.AssetID)
+			// output 被返回说明该 output 是 unspent 的
+			if len(outputs) > 0 && outputs[0].Sequence == output.Sequence {
+				assets.Put(key)
+				continue
+			}
+
+			if err := w.outputs.Delete(ctx, output.Sequence); err != nil {
+				w.logger.Error("outputs.Delete", "err", err)
+				return err
 			}
 		}
 	}
@@ -107,7 +108,7 @@ func (w *Cleaner) run(ctx context.Context) error {
 
 // mergeOutputs 尝试将比较碎的币主动合并
 func (w *Cleaner) mergeOutputs(ctx context.Context) error {
-	balances, err := w.outputs.SumBalances(ctx)
+	balances, err := w.outputs.SumBalances(ctx, "", "")
 	if err != nil {
 		w.logger.Error("outputs.SumBalances", "err", err)
 		return err
@@ -118,14 +119,14 @@ func (w *Cleaner) mergeOutputs(ctx context.Context) error {
 			continue
 		}
 
-		offset, err := w.transfers.GetAssignOffset(ctx, b.AssetID)
+		offset, err := w.transfers.GetAssignOffset(ctx, b.UserID, b.AssetID)
 		if err != nil {
 			w.logger.Error("transfers.GetAssignOffset", "err", err)
 			return err
 		}
 
 		const limit = 256
-		outputs, err := w.outputs.ListTarget(ctx, offset, b.AssetID, b.Amount, limit)
+		outputs, err := w.outputs.ListTarget(ctx, b.UserID, b.AssetID, offset, b.Amount, limit)
 		if err != nil {
 			w.logger.Error("outputs.ListTarget", "err", err)
 			return err
@@ -141,7 +142,7 @@ func (w *Cleaner) mergeOutputs(ctx context.Context) error {
 			Status:    core.TransferStatusPending,
 			AssetID:   b.AssetID,
 			Memo:      "auto merge",
-			Opponent:  w.cfg.Receiver,
+			Opponent:  mixin.RequireNewMixAddress([]string{b.UserID}, 1),
 		}
 
 		t.AssignRange[0] = outputs[0].Sequence

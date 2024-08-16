@@ -20,22 +20,11 @@ type store struct {
 	db *nap.DB
 }
 
-func (s *store) getMaxAssignOffset(ctx context.Context) (uint64, error) {
-	b := sq.Select("MAX(offset)").From("assigns")
-	row := b.RunWith(s.db).QueryRowContext(ctx)
-
-	var seq uint64
-	if err := row.Scan(&seq); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return 0, err
-	}
-
-	return seq, nil
-}
-
-func (s *store) GetOffset(ctx context.Context) (uint64, error) {
+func (s *store) GetNextSequence(ctx context.Context, offset uint64) (uint64, error) {
 	b := sq.Select("sequence").
 		From("outputs").
-		OrderBy("sequence DESC").
+		Where("sequence >= ?", offset).
+		OrderBy("sequence").
 		Limit(1)
 	row := b.RunWith(s.db).QueryRowContext(ctx)
 
@@ -43,7 +32,7 @@ func (s *store) GetOffset(ctx context.Context) (uint64, error) {
 	if err := row.Scan(&seq); err == nil {
 		return seq, nil
 	} else if errors.Is(err, sql.ErrNoRows) {
-		return s.getMaxAssignOffset(ctx)
+		return 0, nil
 	} else {
 		return 0, err
 	}
@@ -161,8 +150,8 @@ func (s *store) ListRange(ctx context.Context, userID, assetID string, from, to 
 	return outputs, nil
 }
 
-func (s *store) Delete(ctx context.Context, seq uint64) error {
-	b := sq.Delete("outputs").Where("sequence = ?", seq)
+func (s *store) Delete(ctx context.Context, sequence uint64) error {
+	b := sq.Delete("outputs").Where("sequence = ?", sequence)
 	_, err := b.RunWith(s.db).ExecContext(ctx)
 	return err
 }
