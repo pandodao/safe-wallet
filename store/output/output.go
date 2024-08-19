@@ -3,7 +3,6 @@ package output
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/pandodao/generic"
@@ -18,24 +17,6 @@ func New(db *nap.DB) core.OutputStore {
 
 type store struct {
 	db *nap.DB
-}
-
-func (s *store) GetNextSequence(ctx context.Context, offset uint64) (uint64, error) {
-	b := sq.Select("sequence").
-		From("outputs").
-		Where("sequence >= ?", offset).
-		OrderBy("sequence").
-		Limit(1)
-	row := b.RunWith(s.db).QueryRowContext(ctx)
-
-	var seq uint64
-	if err := row.Scan(&seq); err == nil {
-		return seq, nil
-	} else if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
-	} else {
-		return 0, err
-	}
 }
 
 func saveOutput(ctx context.Context, tx *sql.Tx, output *core.Output) error {

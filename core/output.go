@@ -26,7 +26,6 @@ type Balance struct {
 }
 
 type OutputStore interface {
-	GetNextSequence(ctx context.Context, offset uint64) (uint64, error)
 	Save(ctx context.Context, outputs []*Output) error
 	List(ctx context.Context, userID string, offset uint64, limit int) ([]*Output, error)
 	ListTarget(ctx context.Context, userID, assetID string, offset uint64, target decimal.Decimal, limit int) ([]*Output, error)
