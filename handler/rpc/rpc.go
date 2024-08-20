@@ -241,6 +241,24 @@ func (s *Server) CreateWallet(ctx context.Context, req *safewallet.CreateWalletR
 	}, nil
 }
 
+func (s *Server) FindWallet(ctx context.Context, req *safewallet.FindWalletRequest) (*safewallet.FindWalletResponse, error) {
+	balances, err := s.outputs.SumBalances(ctx, req.UserId, "")
+	if err != nil {
+		s.logger.Error("outputs.SumBalances", "err", err)
+		return nil, err
+	}
+
+	resp := &safewallet.FindWalletResponse{}
+	for _, balance := range balances {
+		resp.Balances = append(resp.Balances, &safewallet.Balance{
+			AssetId: balance.AssetID,
+			Amount:  balance.Amount.String(),
+		})
+	}
+
+	return resp, nil
+}
+
 func viewTransfer(transfer *core.Transfer) *safewallet.Transfer {
 	return &safewallet.Transfer{
 		TraceId:   transfer.TraceID,
