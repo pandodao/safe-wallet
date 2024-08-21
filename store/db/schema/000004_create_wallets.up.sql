@@ -5,9 +5,9 @@ CREATE TABLE IF NOT EXISTS `wallets` (
     `label` varchar(64) NOT NULL,
     `session_id` char(36) NOT NULL,
     `pin_token` varchar(64) NOT NULL,
-    `pin` varchar(64) NOT NULL,
-    `private_key` varchar(128) NOT NULL,
-    `spend_key` char(64) NOT NULL,
+    `pin` varchar(256) NOT NULL,
+    `private_key` varchar(256) NOT NULL,
+    `spend_key` varchar(256) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY idx_wallets_user (`user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;

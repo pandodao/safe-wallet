@@ -37,7 +37,12 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	propertyStore := property.New(db)
 	syncerSyncer := syncer.New(outputService, outputStore, propertyStore, logger)
 	transferStore := transfer.New(db)
-	walletStore := wallet.New(db)
+	v2, err := provideEncryptKey(keystore)
+	if err != nil {
+		cleanup()
+		return app{}, nil, err
+	}
+	walletStore := wallet.New(db, v2)
 	key, err := provideSpendKey(v, client)
 	if err != nil {
 		cleanup()

@@ -6,7 +6,6 @@ import (
 	"github.com/google/wire"
 	"github.com/pandodao/safe-wallet/service/loader"
 	"github.com/pandodao/safe-wallet/service/output"
-	"github.com/pandodao/safe-wallet/service/transfer"
 	"github.com/pandodao/safe-wallet/service/wallet"
 	"github.com/spf13/viper"
 )
@@ -16,7 +15,6 @@ var serviceSet = wire.NewSet(
 	provideMixinClient,
 	provideSpendKey,
 	output.New,
-	transfer.New,
 	wallet.New,
 	loader.New,
 )
@@ -35,5 +33,6 @@ func provideMixinClient(ks *mixin.Keystore) (*mixin.Client, error) {
 }
 
 func provideSpendKey() mixinnet.Key {
+	// server is not allowed to sign transactions
 	return mixinnet.Key{}
 }

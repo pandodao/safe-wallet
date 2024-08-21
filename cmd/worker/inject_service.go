@@ -16,7 +16,6 @@ var serviceSet = wire.NewSet(
 	provideMixinClient,
 	provideSpendKey,
 	output.New,
-	// transfer.New,
 	loader.New,
 )
 
