@@ -38,18 +38,22 @@ func (s *service) Pull(ctx context.Context, offset uint64, limit int) ([]*core.O
 			continue
 		}
 
-		outputs = append(outputs, &core.Output{
-			Sequence:  utxo.Sequence,
-			CreatedAt: utxo.CreatedAt,
-			Hash:      utxo.TransactionHash,
-			Index:     utxo.OutputIndex,
-			UserID:    utxo.Receivers[0],
-			AssetID:   utxo.AssetID,
-			Amount:    utxo.Amount,
-		})
+		outputs = append(outputs, utxoToOutput(utxo))
 	}
 
 	return outputs, offset, nil
+}
+
+func utxoToOutput(utxo *mixin.SafeUtxo) *core.Output {
+	return &core.Output{
+		Sequence:  utxo.Sequence,
+		CreatedAt: utxo.CreatedAt,
+		Hash:      utxo.TransactionHash,
+		Index:     utxo.OutputIndex,
+		UserID:    utxo.Receivers[0],
+		AssetID:   utxo.AssetID,
+		Amount:    utxo.Amount,
+	}
 }
 
 func (s *service) ListRange(ctx context.Context, assetID string, from, to uint64) ([]*core.Output, error) {
@@ -75,14 +79,7 @@ func (s *service) ListRange(ctx context.Context, assetID string, from, to uint64
 			break
 		}
 
-		outputs = append(outputs, &core.Output{
-			Sequence:  utxo.Sequence,
-			CreatedAt: utxo.CreatedAt,
-			Hash:      utxo.TransactionHash,
-			Index:     utxo.OutputIndex,
-			AssetID:   utxo.AssetID,
-			Amount:    utxo.Amount,
-		})
+		outputs = append(outputs, utxoToOutput(utxo))
 	}
 
 	return outputs, nil

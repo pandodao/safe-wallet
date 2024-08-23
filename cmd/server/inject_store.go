@@ -59,7 +59,11 @@ func provideDB(v *viper.Viper) (*nap.DB, func(), error) {
 		return nil, nil, err
 	}
 
-	if err := db.Migrate(conn.Master()); err != nil {
+	data := db.MigrateData{
+		UserID: v.GetString("dapp.client_id"),
+	}
+
+	if err := db.Migrate(conn.Master(), data); err != nil {
 		return nil, nil, err
 	}
 

@@ -137,6 +137,7 @@ func (w *Cleaner) mergeOutputs(ctx context.Context) error {
 		}
 
 		t := &core.Transfer{
+			UserID:    b.UserID,
 			CreatedAt: time.Now(),
 			TraceID:   uuid.NewString(),
 			Status:    core.TransferStatusPending,
