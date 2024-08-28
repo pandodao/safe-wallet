@@ -53,6 +53,7 @@ func init() {
 	rootCmd.AddCommand(transferCmd)
 
 	transferCmd.Flags().StringVar(&transferOpt.TraceId, "trace", "", "trace id (optional)")
+	transferCmd.Flags().StringVar(&transferOpt.UserId, "wallet", "", "wallet id (optional)")
 	transferCmd.Flags().StringVar(&transferOpt.AssetId, "asset", "", "asset id")
 	transferCmd.Flags().StringVar(&transferOpt.Amount, "amount", "0", "amount")
 	transferCmd.Flags().StringVar(&transferOpt.Memo, "memo", "", "memo (optional)")

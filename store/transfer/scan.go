@@ -14,10 +14,6 @@ type querier interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 }
 
-type execer interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-}
-
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -27,6 +23,7 @@ var scanColumns = []string{
 	"created_at",
 	"trace_id",
 	"status",
+	"user_id",
 	"asset_id",
 	"amount",
 	"memo",
@@ -48,6 +45,7 @@ func scanTransfer(scanner scanner, transfer *core.Transfer) error {
 		&transfer.CreatedAt,
 		&transfer.TraceID,
 		&transfer.Status,
+		&transfer.UserID,
 		&transfer.AssetID,
 		&transfer.Amount,
 		&memo,

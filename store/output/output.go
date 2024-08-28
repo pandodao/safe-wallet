@@ -3,7 +3,6 @@ package output
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/pandodao/generic"
@@ -20,29 +19,13 @@ type store struct {
 	db *nap.DB
 }
 
-func (s *store) GetOffset(ctx context.Context) (uint64, error) {
-	b := sq.Select("sequence").
-		From("outputs").
-		OrderBy("sequence DESC").
-		Limit(1)
-	stmt, args := b.MustSql()
-	row := s.db.QueryRowContext(ctx, stmt, args...)
-
-	var seq uint64
-	if err := row.Scan(&seq); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return 0, err
-	}
-
-	return seq, nil
-}
-
-func save(ctx context.Context, tx *sql.Tx, output *core.Output) error {
+func saveOutput(ctx context.Context, tx *sql.Tx, output *core.Output) error {
 	b := sq.Insert("outputs").
 		Options("IGNORE").
-		Columns("sequence", "created_at", "hash", "`index`", "asset_id", "amount").
-		Values(output.Sequence, output.CreatedAt, output.Hash.String(), output.Index, output.AssetID, output.Amount)
-	stmt, args := b.MustSql()
-	_, err := tx.ExecContext(ctx, stmt, args...)
+		Columns("sequence", "created_at", "hash", "`index`", "user_id", "asset_id", "amount").
+		Values(output.Sequence, output.CreatedAt, output.Hash.String(), output.Index, output.UserID, output.AssetID, output.Amount)
+
+	_, err := b.RunWith(tx).ExecContext(ctx)
 	return err
 }
 
@@ -51,7 +34,7 @@ func (s *store) Save(ctx context.Context, outputs []*core.Output) error {
 	defer tx.Rollback()
 
 	for _, output := range outputs {
-		if err := save(ctx, tx, output); err != nil {
+		if err := saveOutput(ctx, tx, output); err != nil {
 			return err
 		}
 	}
@@ -59,14 +42,18 @@ func (s *store) Save(ctx context.Context, outputs []*core.Output) error {
 	return tx.Commit()
 }
 
-func (s *store) List(ctx context.Context, offset uint64, limit int) ([]*core.Output, error) {
+func (s *store) List(ctx context.Context, userID string, offset uint64, limit int) ([]*core.Output, error) {
 	b := sq.Select(scanColumns...).
 		From("outputs").
 		Where("sequence >= ?", offset).
 		Limit(uint64(limit)).
 		OrderBy("sequence")
-	stmt, args := b.MustSql()
-	rows, err := s.db.QueryContext(ctx, stmt, args...)
+
+	if userID != "" {
+		b = b.Where("user_id = ?", userID)
+	}
+
+	rows, err := b.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +73,13 @@ func (s *store) List(ctx context.Context, offset uint64, limit int) ([]*core.Out
 	return outputs, nil
 }
 
-func (s *store) ListTarget(ctx context.Context, offset uint64, assetID string, target decimal.Decimal, limit int) ([]*core.Output, error) {
+func (s *store) ListTarget(ctx context.Context, userID, assetID string, offset uint64, target decimal.Decimal, limit int) ([]*core.Output, error) {
 	b := sq.Select(scanColumns...).
 		From("outputs").
-		Where("asset_id = ? AND sequence > ?", assetID, offset).
+		Where("user_id = ? AND asset_id = ? AND sequence > ?", userID, assetID, offset).
 		OrderBy("sequence").
 		Limit(uint64(limit))
-	stmt, args := b.MustSql()
-	rows, err := s.db.QueryContext(ctx, stmt, args...)
+	rows, err := b.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +106,12 @@ func (s *store) ListTarget(ctx context.Context, offset uint64, assetID string, t
 	return outputs, nil
 }
 
-func (s *store) ListRange(ctx context.Context, assetID string, from, to uint64) ([]*core.Output, error) {
+func (s *store) ListRange(ctx context.Context, userID, assetID string, from, to uint64) ([]*core.Output, error) {
 	b := sq.Select(scanColumns...).
 		From("outputs").
-		Where("asset_id = ? AND sequence >= ? AND sequence <= ?", assetID, from, to).
+		Where("user_id = ? AND asset_id = ? AND sequence >= ? AND sequence <= ?", userID, assetID, from, to).
 		OrderBy("sequence")
-	stmt, args := b.MustSql()
-	rows, err := s.db.QueryContext(ctx, stmt, args...)
+	rows, err := b.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -146,48 +131,28 @@ func (s *store) ListRange(ctx context.Context, assetID string, from, to uint64) 
 	return outputs, nil
 }
 
-func (s *store) Delete(ctx context.Context, seq uint64) error {
-	b := sq.Delete("outputs").Where("sequence = ?", seq)
-	stmt, args := b.MustSql()
-	_, err := s.db.ExecContext(ctx, stmt, args...)
+func (s *store) Delete(ctx context.Context, sequence uint64) error {
+	b := sq.Delete("outputs").Where("sequence = ?", sequence)
+	_, err := b.RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *store) Clean(ctx context.Context, assetID string, offset uint64) error {
-	b := sq.Delete("outputs").
-		Where("asset_id = ? AND sequence < ?", assetID, offset)
-	stmt, args := b.MustSql()
-	_, err := s.db.ExecContext(ctx, stmt, args...)
-	return err
-}
-
-func (s *store) SumBalance(ctx context.Context, asset string) (*core.Balance, error) {
-	b := sq.Select("outputs.asset_id", "SUM(outputs.amount)", "COUNT(*)").
+func (s *store) SumBalances(ctx context.Context, userID, assetID string) ([]*core.Balance, error) {
+	b := sq.Select("outputs.user_id", "outputs.asset_id", "SUM(outputs.amount)", "COUNT(*)").
 		From("outputs").
-		LeftJoin("assigns ON outputs.asset_id = assigns.asset_id").
-		Where("outputs.asset_id = ?", asset).
+		LeftJoin("assigns ON outputs.asset_id = assigns.asset_id AND outputs.user_id = assigns.user_id").
 		Where("outputs.sequence > COALESCE(assigns.offset,0)").
-		GroupBy("outputs.asset_id")
-	stmt, args := b.MustSql()
-	row := s.db.QueryRowContext(ctx, stmt, args...)
+		GroupBy("outputs.user_id", "outputs.asset_id")
 
-	balance := core.Balance{AssetID: asset}
-	if err := row.Scan(&balance.AssetID, &balance.Amount, &balance.Count); !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
+	if userID != "" {
+		b = b.Where("outputs.user_id = ?", userID)
+
+		if assetID != "" {
+			b = b.Where("outputs.asset_id = ?", assetID)
+		}
 	}
 
-	return &balance, nil
-}
-
-func (s *store) SumBalances(ctx context.Context) ([]*core.Balance, error) {
-	b := sq.Select("outputs.asset_id", "SUM(outputs.amount)", "COUNT(*)").
-		From("outputs").
-		LeftJoin("assigns ON outputs.asset_id = assigns.asset_id").
-		Where("outputs.sequence > COALESCE(assigns.offset,0)").
-		GroupBy("outputs.asset_id")
-
-	stmt, args := b.MustSql()
-	rows, err := s.db.QueryContext(ctx, stmt, args...)
+	rows, err := b.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +162,7 @@ func (s *store) SumBalances(ctx context.Context) ([]*core.Balance, error) {
 	var balances []*core.Balance
 	for rows.Next() {
 		var balance core.Balance
-		if err := rows.Scan(&balance.AssetID, &balance.Amount, &balance.Count); err != nil {
+		if err := rows.Scan(&balance.UserID, &balance.AssetID, &balance.Amount, &balance.Count); err != nil {
 			return nil, err
 		}
 

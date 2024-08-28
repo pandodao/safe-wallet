@@ -6,32 +6,28 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/pandodao/safe-wallet/core"
 	"golang.org/x/sync/errgroup"
 )
 
 func New(
 	outputs core.OutputStore,
-	outputz core.OutputService,
 	transfers core.TransferStore,
-	transferz core.TransferService,
+	loader core.ServiceLoader,
 	logger *slog.Logger,
 ) *Cashier {
 	return &Cashier{
 		outputs:   outputs,
-		outputz:   outputz,
 		transfers: transfers,
-		transferz: transferz,
+		loader:    loader,
 		logger:    logger.With("worker", "cashier"),
 	}
 }
 
 type Cashier struct {
 	outputs   core.OutputStore
-	outputz   core.OutputService
 	transfers core.TransferStore
-	transferz core.TransferService
+	loader    core.ServiceLoader
 	logger    *slog.Logger
 }
 
@@ -82,14 +78,20 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 
 	logger.Info("handle transfer", "asset", transfer.AssetID, "amount", transfer.Amount)
 
-	outputs, err := w.outputs.ListRange(ctx, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
+	outputs, err := w.outputs.ListRange(ctx, transfer.UserID, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
 	if err != nil {
 		logger.Error("outputs.ListRange", "err", err)
 		return err
 	}
 
 	if len(outputs) == 0 {
-		outputs, err = w.outputz.ListRange(ctx, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
+		outputz, err := w.loader.LoadOutput(ctx, transfer.UserID)
+		if err != nil {
+			logger.Error("loader.LoadOutput", "err", err, "user", transfer.UserID)
+			return err
+		}
+
+		outputs, err = outputz.ListRange(ctx, transfer.AssetID, transfer.AssignRange[0], transfer.AssignRange[1])
 		if err != nil {
 			logger.Error("outputz.ListRange", "err", err)
 			return err
@@ -103,7 +105,13 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 
 	logger.Debug("assigned outputs loaded", "count", len(outputs))
 
-	if err := w.transferz.Spend(ctx, transfer, outputs); err != nil {
+	transferz, err := w.loader.LoadTransfer(ctx, transfer.UserID)
+	if err != nil {
+		logger.Error("loader.LoadTransfer", "err", err, "user", transfer.UserID)
+		return err
+	}
+
+	if err := transferz.Spend(ctx, transfer, outputs); err != nil {
 		logger.Error("transferz.Spend", "err", err)
 		return err
 	}
@@ -117,17 +125,4 @@ func (w *Cashier) handleTransfer(ctx context.Context, transfer *core.Transfer) e
 
 	logger.Debug("transfer status updated")
 	return nil
-}
-
-func (w *Cashier) inspectTransferStatus(ctx context.Context, traceID string) (core.TransferStatus, error) {
-	transfer, err := w.transferz.Find(ctx, traceID)
-
-	switch {
-	case err == nil && transfer.Status > core.TransferStatusPending:
-		return transfer.Status, nil
-	case err != nil && !mixin.IsErrorCodes(err, mixin.EndpointNotFound):
-		return 0, err
-	default:
-		return core.TransferStatusPending, nil
-	}
 }

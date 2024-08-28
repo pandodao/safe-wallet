@@ -4,9 +4,9 @@ import (
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/fox-one/mixin-sdk-go/v2/mixinnet"
 	"github.com/google/wire"
-	"github.com/pandodao/safe-wallet/service/asset"
+	"github.com/pandodao/safe-wallet/service/loader"
 	"github.com/pandodao/safe-wallet/service/output"
-	"github.com/pandodao/safe-wallet/service/transfer"
+	"github.com/pandodao/safe-wallet/service/wallet"
 	"github.com/spf13/viper"
 )
 
@@ -14,9 +14,9 @@ var serviceSet = wire.NewSet(
 	provideKeystore,
 	provideMixinClient,
 	provideSpendKey,
-	asset.New,
 	output.New,
-	transfer.New,
+	wallet.New,
+	loader.New,
 )
 
 func provideKeystore(v *viper.Viper) *mixin.Keystore {
@@ -33,5 +33,6 @@ func provideMixinClient(ks *mixin.Keystore) (*mixin.Client, error) {
 }
 
 func provideSpendKey() mixinnet.Key {
+	// server is not allowed to sign transactions
 	return mixinnet.Key{}
 }

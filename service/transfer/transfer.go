@@ -12,55 +12,29 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func New(assetz core.AssetService, client *mixin.Client, key mixinnet.Key) core.TransferService {
+func New(client *mixin.Client, spendKey mixinnet.Key) core.TransferService {
 	return &service{
 		client:   client,
-		spendKey: key,
-		assetz:   assetz,
+		spendKey: spendKey,
 	}
 }
 
 type service struct {
 	client   *mixin.Client
 	spendKey mixinnet.Key
-
-	assetz core.AssetService
-}
-
-func (s *service) Find(ctx context.Context, traceID string) (*core.Transfer, error) {
-	req, err := s.client.SafeReadTransactionRequest(ctx, traceID)
-	if err != nil {
-		return nil, err
-	}
-
-	receiver := req.Receivers[0]
-	opponent := mixin.RequireNewMixAddress(receiver.Members, receiver.Threshold)
-
-	tx := generic.Must(mixinnet.TransactionFromRaw(req.RawTransaction))
-	amount := generic.Must(decimal.NewFromString(tx.Outputs[0].Amount.String()))
-
-	transfer := &core.Transfer{
-		CreatedAt: req.CreatedAt,
-		TraceID:   req.RequestID,
-		Status:    core.TransferStatusPending,
-		AssetID:   req.Asset.String(),
-		Amount:    amount,
-		Memo:      string(generic.Must(hex.DecodeString(req.Extra))),
-		Opponent:  opponent,
-	}
-
-	switch req.State {
-	case mixin.SafeUtxoStateSigned:
-		transfer.Status = core.TransferStatusAssigned
-	case mixin.SafeUtxoStateSpent:
-		transfer.Status = core.TransferStatusHandled
-	}
-
-	return transfer, nil
 }
 
 func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []*core.Output) error {
-	asset, err := s.assetz.Find(ctx, transfer.AssetID)
+	if s.client.ClientID != transfer.UserID {
+		panic("transfer user id not match")
+	}
+
+	asset, err := s.getAsset(ctx, transfer.AssetID)
+	if err != nil {
+		return err
+	}
+
+	assetHash, err := mixinnet.HashFromString(asset.KernelAssetID)
 	if err != nil {
 		return err
 	}
@@ -71,12 +45,16 @@ func (s *service) Spend(ctx context.Context, transfer *core.Transfer, outputs []
 	)
 
 	for _, output := range outputs {
+		if output.UserID != transfer.UserID {
+			panic("output user id not match")
+		}
+
 		utxos = append(utxos, &mixin.SafeUtxo{
 			TransactionHash:    output.Hash,
 			OutputIndex:        output.Index,
-			KernelAssetID:      asset.Hash,
+			KernelAssetID:      assetHash,
 			Amount:             output.Amount,
-			Receivers:          []string{s.client.ClientID},
+			Receivers:          []string{output.UserID},
 			ReceiversThreshold: 1,
 		})
 
