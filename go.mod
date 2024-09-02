@@ -14,7 +14,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
 	github.com/pandodao/generic v1.0.3
-	github.com/rs/cors v1.11.0
+	github.com/rs/cors v1.11.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.19.0
 	github.com/tsenart/nap v0.0.0-20190313104555-a650a3fbb7be
