@@ -101,6 +101,10 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 		Opponent: generic.Try(mixin.NewMixAddress(req.Opponents, uint8(max(req.Threshold, 1)))),
 	}
 
+	if _, err := uuid.Parse(req.UserId); err != nil {
+		return nil, twirp.InvalidArgument.Errorf("invalid user id: %q", req.UserId)
+	}
+
 	if _, err := uuid.Parse(req.TraceId); err != nil {
 		return nil, twirp.InvalidArgument.Error("invalid trace id")
 	}
@@ -133,7 +137,7 @@ func (s *Server) CreateTransfer(ctx context.Context, req *safewallet.CreateTrans
 }
 
 func (s *Server) createTransfer(ctx context.Context, transfer *core.Transfer) error {
-	logger := s.logger.With("id", transfer.TraceID, "asset", transfer.AssetID, "amount", transfer.Amount)
+	logger := s.logger.With("id", transfer.TraceID, "user", transfer.UserID, "asset", transfer.AssetID, "amount", transfer.Amount)
 
 	if _, err := s.transfers.FindTrace(ctx, transfer.TraceID); err == nil {
 		return nil
