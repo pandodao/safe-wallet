@@ -21,7 +21,7 @@ require (
 	github.com/twitchtv/twirp v8.1.3+incompatible
 	github.com/zyedidia/generic v1.2.1
 	golang.org/x/sync v0.8.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.35.1
 )
 
 require github.com/inconshreveable/mousetrap v1.1.0 // indirect
