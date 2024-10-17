@@ -7,6 +7,7 @@
 package main
 
 import (
+	"github.com/pandodao/safe-wallet/cmd/worker/cmds"
 	"github.com/pandodao/safe-wallet/service/loader"
 	"github.com/pandodao/safe-wallet/service/output"
 	output2 "github.com/pandodao/safe-wallet/store/output"
@@ -23,26 +24,30 @@ import (
 // Injectors from wire.go:
 
 func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
-	keystore := provideKeystore(v)
-	client, err := provideMixinClient(keystore)
-	if err != nil {
-		return app{}, nil, err
-	}
-	outputService := output.New(client)
 	db, cleanup, err := provideDB(v)
 	if err != nil {
 		return app{}, nil, err
 	}
-	outputStore := output2.New(db)
-	propertyStore := property.New(db)
-	syncerSyncer := syncer.New(outputService, outputStore, propertyStore, logger)
-	transferStore := transfer.New(db)
+	keystore := provideKeystore(v)
 	v2, err := provideEncryptKey(keystore)
 	if err != nil {
 		cleanup()
 		return app{}, nil, err
 	}
 	walletStore := wallet.New(db, v2)
+	cmd := &cmds.Cmd{
+		Wallets: walletStore,
+	}
+	client, err := provideMixinClient(keystore)
+	if err != nil {
+		cleanup()
+		return app{}, nil, err
+	}
+	outputService := output.New(client)
+	outputStore := output2.New(db)
+	propertyStore := property.New(db)
+	syncerSyncer := syncer.New(outputService, outputStore, propertyStore, logger)
+	transferStore := transfer.New(db)
 	key, err := provideSpendKey(v, client)
 	if err != nil {
 		cleanup()
@@ -53,6 +58,7 @@ func setupApp(v *viper.Viper, logger *slog.Logger) (app, func(), error) {
 	config := provideCleanerConfig(v, keystore)
 	cleanerCleaner := cleaner.New(outputStore, transferStore, outputService, logger, config)
 	mainApp := app{
+		cmds:    cmd,
 		syncer:  syncerSyncer,
 		cashier: cashierCashier,
 		cleaner: cleanerCleaner,

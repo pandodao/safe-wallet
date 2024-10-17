@@ -77,9 +77,32 @@ func (s *walletStore) Find(ctx context.Context, userID string) (*core.Wallet, er
 	return w, nil
 }
 
+func (s *walletStore) List(ctx context.Context) ([]*core.Wallet, error) {
+	b := sq.Select(columns...).From("wallets")
+	rows, err := b.RunWith(s.db).QueryContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var wallets []*core.Wallet
+	for rows.Next() {
+		wallet, err := decodeWallet(rows, s.key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode wallet: %w", err)
+		}
+		wallets = append(wallets, wallet)
+	}
+
+	return wallets, nil
+}
+
 func (s *walletStore) find(ctx context.Context, userID string) (*core.Wallet, error) {
 	b := sq.Select(columns...).From("wallets").Where(sq.Eq{"user_id": userID})
 	row := b.RunWith(s.db).QueryRowContext(ctx)
+	return decodeWallet(row, s.key)
+}
+
+func decodeWallet(row sq.RowScanner, key []byte) (*core.Wallet, error) {
 	var wallet core.Wallet
 	var encryptedPin, encryptedSpendKey string
 	err := row.Scan(&wallet.UserID, &wallet.Label, &wallet.SessionID, &wallet.PinToken, &encryptedPin, &wallet.PrivateKey, &encryptedSpendKey)
@@ -87,12 +110,12 @@ func (s *walletStore) find(ctx context.Context, userID string) (*core.Wallet, er
 		return nil, err
 	}
 
-	wallet.Pin, err = decrypt(s.key, encryptedPin)
+	wallet.Pin, err = decrypt(key, encryptedPin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt PIN: %w", err)
 	}
 
-	wallet.SpendKey, err = decrypt(s.key, encryptedSpendKey)
+	wallet.SpendKey, err = decrypt(key, encryptedSpendKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt SpendKey: %w", err)
 	}

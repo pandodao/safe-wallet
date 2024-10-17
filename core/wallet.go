@@ -15,6 +15,7 @@ type Wallet struct {
 type WalletStore interface {
 	Create(ctx context.Context, wallet *Wallet) error
 	Find(ctx context.Context, userID string) (*Wallet, error)
+	List(ctx context.Context) ([]*Wallet, error)
 }
 
 type WalletService interface {

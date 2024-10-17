@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/carlmjohnson/versioninfo"
+	"github.com/pandodao/safe-wallet/cmd/worker/cmds"
 	"github.com/pandodao/safe-wallet/worker/cashier"
 	"github.com/pandodao/safe-wallet/worker/cleaner"
 	"github.com/pandodao/safe-wallet/worker/syncer"
@@ -35,6 +36,8 @@ func main() {
 	flag.BoolVar(&opt.version, "version", false, "show version")
 	flag.Parse()
 
+	flag.Args()
+
 	if opt.version {
 		fmt.Printf("safe-wallet worker\n\tversion: %s\n\tcommit: %s\n", version, commit)
 		return
@@ -53,6 +56,14 @@ func main() {
 	}
 
 	defer cleanup()
+
+	if args := flag.Args(); len(args) > 0 {
+		logger.Info("running command", "args", args)
+		if err := app.cmds.Run(ctx, args); err != nil {
+			logger.Error("command failed", "err", err)
+		}
+		return
+	}
 
 	logger.Info("safe wallet worker launched", "version", version, "commit", commit)
 
@@ -76,6 +87,7 @@ func main() {
 }
 
 type app struct {
+	cmds    *cmds.Cmd
 	syncer  *syncer.Syncer
 	cashier *cashier.Cashier
 	cleaner *cleaner.Cleaner
