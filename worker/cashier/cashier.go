@@ -35,9 +35,9 @@ func (w *Cashier) Run(ctx context.Context) error {
 	w.logger.Info("cashier start")
 
 	for {
-		dur := 500 * time.Millisecond
+		dur := time.Second
 		if w.run(ctx) == nil {
-			dur = 200 * time.Millisecond
+			dur = 500 * time.Millisecond
 		}
 
 		select {

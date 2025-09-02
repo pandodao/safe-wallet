@@ -38,9 +38,9 @@ func (w *Syncer) Run(ctx context.Context) error {
 	w.logger.Info("syncer start")
 
 	for {
-		dur := time.Second
+		dur := time.Second * 2
 		if w.run(ctx) == nil {
-			dur = 500 * time.Millisecond
+			dur = time.Second
 		}
 
 		select {
